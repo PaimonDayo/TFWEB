@@ -6,7 +6,6 @@
   <title>TUATTF 練習スケジュール</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <style>
-    /* 略：既存のスタイルはそのまま */
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background-color: #f9fafb;
@@ -190,6 +189,9 @@
 
     const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
     let selectedMonth   = currentMonth;
+    
+    // タイムアウト処理用の変数
+    let fetchTimeoutId = null;
 
     initMonthTabs();
     loadMonthData(selectedMonth);
@@ -220,6 +222,12 @@
     }
 
     function clearContent() {
+      // タイムアウトがあれば解除
+      if (fetchTimeoutId) {
+        clearTimeout(fetchTimeoutId);
+        fetchTimeoutId = null;
+      }
+      
       todayScheduleElem.innerHTML = '<div class="loader"></div>';
       scheduleListElem.innerHTML = '<div class="loader"></div>';
       todaySection.style.display = selectedMonth===currentMonth ? 'block' : 'none';
@@ -227,6 +235,12 @@
 
     function loadMonthData(month) {
       clearContent();
+      
+      // 10秒後にタイムアウトエラーを表示
+      fetchTimeoutId = setTimeout(() => {
+        showFetchError(month, 'データの取得がタイムアウトしました。インターネット接続を確認するか、後でもう一度お試しください。');
+      }, 10000);
+      
       const namesToTry = [ `${month}月メニュー` ];
       if (month < 10) namesToTry.push(`0${month}月メニュー`);
       _tryFetch(namesToTry, 0);
@@ -235,92 +249,169 @@
     function _tryFetch(names, idx) {
       if (idx >= names.length) {
         showSheetNotFoundError(selectedMonth);
+        clearTimeout(fetchTimeoutId);
+        fetchTimeoutId = null;
         return;
       }
       const sheetName = names[idx];
       const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+      
       fetch(url)
-        .then(res => res.ok ? res.text() : Promise.reject(res.status))
+        .then(res => {
+          if (!res.ok) {
+            throw res.status;
+          }
+          return res.text();
+        })
         .then(text => {
+          // タイムアウトを解除
+          clearTimeout(fetchTimeoutId);
+          fetchTimeoutId = null;
+
           if (/no such sheet|Invalid query parameter value/i.test(text)) {
             return _tryFetch(names, idx+1);
           }
-          // JSON抽出
-          const m = text.match(/setResponse\(([\s\S]+)\);?$/);
-          if (!m) throw new Error('Invalid GViz response');
-          const jsonData = JSON.parse(m[1]);
-          if (jsonData.status==='error' || !jsonData.table?.rows) {
-            return _tryFetch(names, idx+1);
-          }
-          if (jsonData.table.rows.length <= 1) {
-            showEmptyDataMessage(month);
+          
+          // Google Sheetsのレスポンス形式の対応を強化
+          // 1. "/*O_o*/google.visualization.Query.setResponse(" で始まるパターン
+          let jsonText = '';
+          const stdPattern = /setResponse\(([\s\S]+)\);?$/;
+          const m = text.match(stdPattern);
+          
+          if (m) {
+            jsonText = m[1];
           } else {
-            processSheetData(jsonData.table.rows, month);
+            // 2. JSONを直接探すパターン
+            const jsonStart = text.indexOf('{');
+            const jsonEnd = text.lastIndexOf('}') + 1;
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+              jsonText = text.substring(jsonStart, jsonEnd);
+            } else {
+              throw new Error('Invalid GViz response format');
+            }
+          }
+          
+          try {
+            const jsonData = JSON.parse(jsonText);
+            
+            if (jsonData.status === 'error' || !jsonData.table?.rows) {
+              return _tryFetch(names, idx+1);
+            }
+            
+            if (jsonData.table.rows.length <= 1) {
+              showEmptyDataMessage(month);
+            } else {
+              processSheetData(jsonData.table.rows, month);
+            }
+          } catch (e) {
+            console.error('JSON解析エラー:', e, '\n応答テキスト:', text.substring(0, 200) + '...');
+            throw new Error('Failed to parse JSON: ' + e.message);
           }
         })
         .catch(err => {
-          console.error(err);
-          if (typeof err === 'number' && err===404) showSheetNotFoundError(month);
-          else if (err.message.includes('GViz')) showProcessingError(month);
-          else showFetchError(month);
+          console.error('Fetch error:', err);
+          
+          // タイムアウトを解除
+          clearTimeout(fetchTimeoutId);
+          fetchTimeoutId = null;
+          
+          if (typeof err === 'number' && err === 404) {
+            _tryFetch(names, idx+1);
+          } else if (err.message && err.message.includes('Invalid GViz')) {
+            _tryFetch(names, idx+1);
+          } else if (err.message && err.message.includes('parse JSON')) {
+            showProcessingError(month, 'データの形式が不正です: ' + err.message);
+          } else {
+            showFetchError(month);
+          }
         });
     }
 
     function processSheetData(rows, month) {
-      const items = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row.c || !row.c[0]?.v) continue;
-        const val = row.c[0].v;
-        let dateObj;
-        if (val instanceof Date) {
-          dateObj = val;
-        } else if (row.c[0].f) {
-          // "6月1日(月)" などをパース
-          const fm = row.c[0].f.match(/(\d+)月\s*(\d+)日/);
-          if (fm) dateObj = new Date(currentYear, +fm[1]-1, +fm[2]);
-        } else if (typeof val==='string') {
-          const [mo, da] = val.split('/');
-          dateObj = new Date(currentYear, +mo-1, +da);
+      try {
+        const items = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row.c || !row.c[0]?.v) continue;
+          
+          // 時間または場所が空の場合はスキップ
+          if (!row.c[2]?.v || !row.c[3]?.v) continue;
+          
+          const val = row.c[0].v;
+          let dateObj;
+          let day = null;
+          
+          if (typeof val === 'object' && val && val.getDate) {
+            // Dateオブジェクトの場合
+            dateObj = val;
+            day = dateObj.getDate();
+          } else if (row.c[0].f) {
+            // "6月1日(月)" などをパース
+            const fm = row.c[0].f.match(/(\d+)月\s*(\d+)日/);
+            if (fm) {
+              day = parseInt(fm[2], 10);
+            }
+          } else if (typeof val === 'string') {
+            // "5/1" などの文字列
+            const parts = val.split('/');
+            if (parts.length === 2) {
+              day = parseInt(parts[1], 10);
+            }
+          } else if (typeof val === 'number') {
+            // 数値の可能性もある（シリアル値）
+            const tempDate = new Date(1899, 11, 30);
+            tempDate.setDate(tempDate.getDate() + val);
+            day = tempDate.getDate();
+          }
+          
+          if (!day || isNaN(day)) continue;
+          
+          // 当月分は過去日を除外
+          if (month === currentMonth && day < currentDate) continue;
+
+          items.push({
+            dateStr: `${month}/${day}`,
+            dayOfWeek: row.c[1]?.f || row.c[1]?.v || '',
+            time:        row.c[2]?.v || '',
+            location:    row.c[3]?.v || '',
+            menu:        row.c[4]?.v || '',
+            pace:        row.c[5]?.v || '',
+            strengthening: row.c[6]?.v || '',
+            notes:       row.c[7]?.v || '',
+            day
+          });
         }
-        if (!dateObj) continue;
-        const day = dateObj.getDate();
-        // 当月分は過去日を除外
-        if (month===currentMonth && day < currentDate) continue;
+        
+        if (items.length === 0) {
+          showEmptyDataMessage(month);
+          return;
+        }
+        
+        // 直近順ソート
+        items.sort((a,b) => a.day - b.day);
 
-        items.push({
-          dateStr: `${month}/${day}`,
-          dayOfWeek: row.c[1]?.f || row.c[1]?.v || '',
-          time:        row.c[2]?.v || '',
-          location:    row.c[3]?.v || '',
-          menu:        row.c[4]?.v || '',
-          pace:        row.c[5]?.v || '',
-          strengthening: row.c[6]?.v || '',
-          notes:       row.c[7]?.v || '',
-          day
+        const todayItems = [], otherItems = [];
+        const todayKey = `${currentMonth}/${currentDate}`;
+        items.forEach(it => {
+          if (month === currentMonth && it.dateStr === todayKey) todayItems.push(it);
+          else otherItems.push(it);
         });
-      }
-      if (items.length === 0) {
-        showEmptyDataMessage(month);
-        return;
-      }
-      // 直近順ソート
-      items.sort((a,b)=> a.day - b.day);
 
-      const todayItems = [], otherItems = [];
-      const todayKey = `${currentMonth}/${currentDate}`;
-      items.forEach(it=>{
-        if (month===currentMonth && it.dateStr===todayKey) todayItems.push(it);
-        else otherItems.push(it);
-      });
+        if (todayItems.length > 0) {
+          displayScheduleItems(todayItems, todayScheduleElem, true);
+        } else if (month === currentMonth) {
+          todayScheduleElem.innerHTML = '<div class="empty-message">今日の練習予定はありません</div>';
+        }
 
-      if (todayItems.length>0) {
-        displayScheduleItems(todayItems, todayScheduleElem, true);
-      } else if (month===currentMonth) {
-        todayScheduleElem.innerHTML = '<div class="empty-message">今日の練習予定はありません</div>';
+        if (otherItems.length > 0) {
+          displayScheduleItems(otherItems, scheduleListElem, false);
+        } else {
+          scheduleListElem.innerHTML = '<div class="empty-message">練習予定はありません</div>';
+        }
+      } catch (e) {
+        console.error('データ処理エラー:', e);
+        showProcessingError(month, 'データの処理中にエラーが発生しました: ' + e.message);
       }
-
-      displayScheduleItems(otherItems, scheduleListElem, false);
     }
 
     function displayScheduleItems(list, container, isToday) {
@@ -382,24 +473,20 @@
       scheduleListElem.innerHTML = '<div class="empty-message">練習データがありません</div>';
     }
     
-    function showProcessingError(month) {
-      const errorMessage = 'データの処理中にエラーが発生しました。データ形式を確認してください。';
-      
+    function showProcessingError(month, message = 'データの処理中にエラーが発生しました。データ形式を確認してください。') {
       if (month === currentMonth) {
-          todayScheduleElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+          todayScheduleElem.innerHTML = `<div class="error-message">${message}</div>`;
       }
       
-      scheduleListElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+      scheduleListElem.innerHTML = `<div class="error-message">${message}</div>`;
     }
     
-    function showFetchError(month) {
-      const errorMessage = 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。';
-      
+    function showFetchError(month, message = 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。') {
       if (month === currentMonth) {
-          todayScheduleElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+          todayScheduleElem.innerHTML = `<div class="error-message">${message}</div>`;
       }
       
-      scheduleListElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+      scheduleListElem.innerHTML = `<div class="error-message">${message}</div>`;
     }
 
     // 詳細の切り替え関数をグローバルスコープに追加
