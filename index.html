@@ -171,23 +171,10 @@
             // 今日の日付を表示
             currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
             
-            // 利用可能なシート情報
-            const availableMonths = [
-                {month: 1, name: "1月"},
-                {month: 2, name: "2月"},
-                {month: 3, name: "3月"},
-                {month: 4, name: "4月"},
-                {month: 5, name: "5月"},
-                {month: 6, name: "6月"},
-                {month: 7, name: "7月"},
-                {month: 8, name: "8月"},
-                {month: 9, name: "9月"},
-                {month: 10, name: "10月"},
-                {month: 11, name: "11月"},
-                {month: 12, name: "12月"}
-            ];
+            // 月の配列
+            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             
-            // 現在のシート（デフォルトは現在の月）
+            // 現在選択されている月（デフォルトは現在の月）
             let selectedMonth = currentMonth;
             
             // シートセレクタを生成
@@ -200,18 +187,11 @@
             function generateSheetSelector() {
                 sheetSelector.innerHTML = '';
                 
-                // 現在の月から前後の月を表示
-                const prevMonth = selectedMonth - 1 > 0 ? selectedMonth - 1 : 12;
-                const nextMonth = selectedMonth + 1 <= 12 ? selectedMonth + 1 : 1;
-                
-                const months = [prevMonth, selectedMonth, nextMonth];
-                
+                // すべての月を表示
                 months.forEach(month => {
-                    const monthInfo = availableMonths.find(m => m.month === month);
-                    
                     const option = document.createElement('div');
                     option.className = `sheet-option ${month === selectedMonth ? 'active' : ''}`;
-                    option.textContent = monthInfo.name;
+                    option.textContent = `${month}月`;
                     option.dataset.month = month;
                     
                     option.addEventListener('click', function() {
@@ -220,9 +200,6 @@
                             opt.classList.remove('active');
                         });
                         this.classList.add('active');
-                        
-                        // シートセレクタを更新
-                        generateSheetSelector();
                         
                         // タイトルを更新
                         scheduleTitle.textContent = `${selectedMonth}月の練習予定`;
@@ -233,6 +210,12 @@
                     
                     sheetSelector.appendChild(option);
                 });
+                
+                // 選択されている月の要素までスクロール
+                const activeElement = document.querySelector('.sheet-option.active');
+                if (activeElement) {
+                    activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
             }
 
             // データを取得して表示する関数
@@ -241,7 +224,7 @@
                 todaySchedule.innerHTML = '<div class="loader"></div>';
                 allSchedule.innerHTML = '<div class="loader"></div>';
                 
-                // シート名を設定
+                // 現在選択されている月のシート名
                 const sheetName = `${selectedMonth}月メニュー`;
 
                 // タイトルを更新
@@ -269,7 +252,21 @@
                                 // 空の行または必須項目が空の行をスキップ
                                 if (!row.c || !row.c[0] || !row.c[0].v) continue;
                                 
-                                const dateStr = row.c[0]?.v || '';
+                                // 各セルからデータを抽出
+                                let dateStr = '';
+                                if (row.c[0]?.v) {
+                                    // Google Sheetsの日付オブジェクトか文字列かを判定
+                                    if (typeof row.c[0].v === 'string') {
+                                        dateStr = row.c[0].v;
+                                    } else if (row.c[0].f) {
+                                        // fプロパティ（フォーマット済み文字列）があればそれを使用
+                                        dateStr = row.c[0].f;
+                                    } else {
+                                        // Date型の場合はフォーマットを無視して月/日の形式に変換
+                                        dateStr = `${selectedMonth}/${row.c[0].v.getDate ? row.c[0].v.getDate() : '?'}`;
+                                    }
+                                }
+                                
                                 const dayOfWeek = row.c[1]?.v || '';
                                 const time = row.c[2]?.v || '';
                                 const location = row.c[3]?.v || '';
@@ -281,20 +278,17 @@
                                 // 時間または場所が空の場合はスキップ
                                 if (!time || !location) continue;
                                 
-                                // 日付文字列を解析して日付番号を取得
+                                // 日付文字列から日を抽出
+                                let day = 0;
                                 const dateParts = dateStr.split('/');
-                                let month, day;
-                                
                                 if (dateParts.length === 2) {
-                                    month = parseInt(dateParts[0]);
                                     day = parseInt(dateParts[1]);
-                                    
-                                    // 無効な日付はスキップ
-                                    if (isNaN(month) || isNaN(day)) continue;
                                 }
                                 
+                                // 無効な日付はスキップ
+                                if (isNaN(day)) continue;
+                                
                                 scheduleItems.push({
-                                    month: month,
                                     day: day,
                                     dateStr: dateStr,
                                     dayOfWeek: dayOfWeek,
