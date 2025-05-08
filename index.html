@@ -1,507 +1,592 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TUATTF 練習スケジュール</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
+    /* 基本スタイル */
+    :root {
+      --primary: #3b82f6;
+      --primary-light: #93c5fd;
+      --primary-dark: #2563eb;
+      --gray-light: #f3f4f6;
+      --gray-mid: #e5e7eb;
+      --text-dark: #1f2937;
+      --text-mid: #4b5563;
+      --text-light: #9ca3af;
+    }
+
     body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: #f9fafb;
-        color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f9fafb;
+      color: var(--text-dark);
     }
-    
-    .container {
-        max-width: 800px;
-    }
-    
-    .card {
-        transition: all 0.2s ease;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        margin-bottom: 0.75rem;
-        border: 1px solid #e5e7eb;
-        background-color: white;
-    }
-    
-    .card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    
-    .today-card {
-        border-left: 4px solid #2563eb;
-        background-color: #f0f9ff;
-    }
-    
+
+    /* 月タブ */
     .month-tabs {
-        display: flex;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        margin-bottom: 1.5rem;
-        padding: 0.5rem 0;
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0.5rem 0;
+      margin-bottom: 1rem;
     }
-    
+
     .month-tabs::-webkit-scrollbar {
-        display: none;
+      display: none;
     }
-    
+
     .month-tab {
-        padding: 0.5rem 1rem;
-        border-radius: 9999px;
-        margin-right: 0.5rem;
-        font-size: 0.875rem;
-        cursor: pointer;
-        white-space: nowrap;
-        background-color: #e5e7eb;
-        color: #4b5563;
-        transition: all 0.2s ease;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      margin-right: 0.5rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      white-space: nowrap;
+      background-color: var(--gray-mid);
+      color: var(--text-mid);
+      transition: all 0.2s ease;
     }
-    
+
     .month-tab:hover {
-        background-color: #d1d5db;
+      background-color: var(--gray-light);
     }
-    
+
     .month-tab.active {
-        background-color: #2563eb;
-        color: white;
-        font-weight: 500;
+      background-color: var(--primary);
+      color: white;
+      font-weight: 500;
     }
-    
-    .section-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        color: #1f2937;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e5e7eb;
+
+    /* カードスタイル */
+    .schedule-card {
+      background-color: white;
+      border-radius: 0.5rem;
+      border: 1px solid var(--gray-mid);
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+      transition: all 0.2s ease;
     }
-    
-    .loader {
-        width: 2.5rem;
-        height: 2.5rem;
-        border: 0.25rem solid #e5e7eb;
-        border-radius: 50%;
-        border-top-color: #2563eb;
-        animation: spin 1s linear infinite;
-        margin: 2rem auto;
+
+    .schedule-card:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+
+    .today-card {
+      border-left: 4px solid var(--primary);
+      background-color: #f0f9ff;
     }
-    
-    .details {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.3s ease;
+
+    .card-header {
+      padding: 1rem;
+      cursor: pointer;
+      user-select: none;
     }
-    
-    .details.active {
-        max-height: 500px;
+
+    .card-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
     }
-    
+
+    .card-content.active {
+      max-height: 500px;
+    }
+
     .date-badge {
-        background-color: #e5e7eb;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 500;
-        font-size: 0.875rem;
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background-color: var(--gray-light);
+      border-radius: 0.25rem;
+      font-weight: 500;
     }
-    
+
     .location-badge {
-        background-color: #f3f4f6;
-        color: #4b5563;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background-color: var(--gray-light);
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--text-mid);
     }
-    
-    .detail-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-bottom: 0.25rem;
-        font-weight: 500;
+
+    /* ローディングとメッセージ */
+    .loading-spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 0.25rem solid var(--gray-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      margin: 2rem auto;
+      animation: spinner 1s linear infinite;
     }
-    
-    .detail-content {
-        font-size: 0.875rem;
-        margin-bottom: 1rem;
+
+    @keyframes spinner {
+      to { transform: rotate(360deg); }
     }
-    
+
     .error-message {
-        padding: 1rem;
-        text-align: center;
-        background-color: #fee2e2;
-        border: 1px solid #fecaca;
-        color: #b91c1c;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
+      padding: 1rem;
+      text-align: center;
+      background-color: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
     }
-    
-    .empty-message {
-        padding: 1rem;
-        text-align: center;
-        background-color: #f3f4f6;
-        border: 1px solid #e5e7eb;
-        color: #6b7280;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
+
+    .info-message {
+      padding: 1rem;
+      text-align: center;
+      background-color: var(--gray-light);
+      border: 1px solid var(--gray-mid);
+      color: var(--text-mid);
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    /* セクション */
+    .section-title {
+      font-weight: 600;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--text-dark);
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--gray-mid);
+    }
+
+    /* ディテール */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      background-color: var(--gray-light);
+      border-top: 1px solid var(--gray-mid);
+    }
+
+    @media (min-width: 768px) {
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .detail-label {
+      color: var(--text-mid);
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-content {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* デバッグ用 */
+    .debug-panel {
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 1px solid var(--gray-mid);
+      border-radius: 0.25rem;
+      background-color: #f8fafc;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-mid);
     }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
+  <!-- ヘッダー -->
   <header class="bg-white shadow-sm py-4 sticky top-0 z-10">
     <div class="container mx-auto px-4">
       <h1 class="text-xl font-bold">TUATTF 練習スケジュール</h1>
     </div>
   </header>
+
+  <!-- メインコンテンツ -->
   <main class="container mx-auto px-4 py-6">
-    <div id="currentDate" class="text-sm text-gray-500 mb-4"></div>
-    <div id="monthTabs" class="month-tabs"></div>
-    <div id="todaySection" class="mb-8">
+    <!-- 現在の日付 -->
+    <div id="current-date" class="text-sm text-gray-500 mb-4"></div>
+    
+    <!-- 月選択タブ -->
+    <div id="month-tabs" class="month-tabs"></div>
+    
+    <!-- 今日の練習 -->
+    <div id="today-section" class="mb-6">
       <h2 class="section-title">今日の練習</h2>
-      <div id="todaySchedule"><div class="loader"></div></div>
+      <div id="today-schedule"></div>
     </div>
-    <div id="scheduleSection">
-      <h2 id="scheduleTitle" class="section-title">練習予定</h2>
-      <div id="scheduleList"><div class="loader"></div></div>
+    
+    <!-- 練習予定 -->
+    <div id="schedule-section">
+      <h2 id="schedule-title" class="section-title">練習予定</h2>
+      <div id="schedule-list"></div>
     </div>
   </main>
 
+  <!-- スクリプト -->
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // DOM取得
-    const currentDateElement = document.getElementById('currentDate');
-    const monthTabsElement   = document.getElementById('monthTabs');
-    const todaySection       = document.getElementById('todaySection');
-    const todayScheduleElem  = document.getElementById('todaySchedule');
-    const scheduleTitleElem  = document.getElementById('scheduleTitle');
-    const scheduleListElem   = document.getElementById('scheduleList');
-
-    // 現在日時
-    const now          = new Date();
-    const currentYear  = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const currentDate  = now.getDate();
-    currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
-
-    const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
-    let selectedMonth   = currentMonth;
-    
-    // タイムアウト処理用の変数
-    let fetchTimeoutId = null;
-
-    initMonthTabs();
-    loadMonthData(selectedMonth);
-
-    function initMonthTabs() {
-      monthTabsElement.innerHTML = '';
-      for (let m = 1; m <= 12; m++) {
-        const tab = document.createElement('div');
-        tab.className = `month-tab ${m===selectedMonth?'active':''}`;
-        tab.textContent = `${m}月`;
-        tab.dataset.month = m;
-        tab.addEventListener('click', () => {
-          if (+tab.dataset.month === selectedMonth) return;
-          selectedMonth = +tab.dataset.month;
-          scheduleTitleElem.textContent = `${selectedMonth}月の練習予定`;
-          document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          clearContent();
-          loadMonthData(selectedMonth);
-        });
-        monthTabsElement.appendChild(tab);
-      }
-      // 中央スクロール
-      setTimeout(()=>{
-        const active = monthTabsElement.querySelector('.month-tab.active');
-        active && active.scrollIntoView({ inline:'center', behavior:'smooth' });
-      },100);
-    }
-
-    function clearContent() {
-      // タイムアウトがあれば解除
-      if (fetchTimeoutId) {
-        clearTimeout(fetchTimeoutId);
-        fetchTimeoutId = null;
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM要素
+      const currentDateEl = document.getElementById('current-date');
+      const monthTabsEl = document.getElementById('month-tabs');
+      const todaySectionEl = document.getElementById('today-section');
+      const todayScheduleEl = document.getElementById('today-schedule');
+      const scheduleTitleEl = document.getElementById('schedule-title');
+      const scheduleListEl = document.getElementById('schedule-list');
+      
+      // 共通変数
+      const SPREADSHEET_ID = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
+      const currentDate = now.getDate();
+      
+      // 選択中の月（デフォルトは現在の月）
+      let selectedMonth = currentMonth;
+      
+      // アプリケーション初期化
+      init();
+      
+      // 初期化関数
+      function init() {
+        // 現在日付の表示
+        currentDateEl.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
+        
+        // 月タブの初期化
+        initMonthTabs();
+        
+        // データ読み込み
+        loadMonthData(selectedMonth);
       }
       
-      todayScheduleElem.innerHTML = '<div class="loader"></div>';
-      scheduleListElem.innerHTML = '<div class="loader"></div>';
-      todaySection.style.display = selectedMonth===currentMonth ? 'block' : 'none';
-    }
-
-    function loadMonthData(month) {
-      clearContent();
-      
-      // 10秒後にタイムアウトエラーを表示
-      fetchTimeoutId = setTimeout(() => {
-        showFetchError(month, 'データの取得がタイムアウトしました。インターネット接続を確認するか、後でもう一度お試しください。');
-      }, 10000);
-      
-      const namesToTry = [ `${month}月メニュー` ];
-      if (month < 10) namesToTry.push(`0${month}月メニュー`);
-      _tryFetch(namesToTry, 0);
-    }
-
-    function _tryFetch(names, idx) {
-      if (idx >= names.length) {
-        showSheetNotFoundError(selectedMonth);
-        clearTimeout(fetchTimeoutId);
-        fetchTimeoutId = null;
-        return;
-      }
-      const sheetName = names[idx];
-      const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-      
-      fetch(url)
-        .then(res => {
-          if (!res.ok) {
-            throw res.status;
-          }
-          return res.text();
-        })
-        .then(text => {
-          // タイムアウトを解除
-          clearTimeout(fetchTimeoutId);
-          fetchTimeoutId = null;
-
-          if (/no such sheet|Invalid query parameter value/i.test(text)) {
-            return _tryFetch(names, idx+1);
-          }
-          
-          // Google Sheetsのレスポンス形式の対応を強化
-          // 1. "/*O_o*/google.visualization.Query.setResponse(" で始まるパターン
-          let jsonText = '';
-          const stdPattern = /setResponse\(([\s\S]+)\);?$/;
-          const m = text.match(stdPattern);
-          
-          if (m) {
-            jsonText = m[1];
-          } else {
-            // 2. JSONを直接探すパターン
-            const jsonStart = text.indexOf('{');
-            const jsonEnd = text.lastIndexOf('}') + 1;
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-              jsonText = text.substring(jsonStart, jsonEnd);
-            } else {
-              throw new Error('Invalid GViz response format');
-            }
-          }
-          
-          try {
-            const jsonData = JSON.parse(jsonText);
+      // 月タブの初期化
+      function initMonthTabs() {
+        monthTabsEl.innerHTML = '';
+        
+        // 12ヶ月分のタブを作成
+        for (let month = 1; month <= 12; month++) {
+          const tab = document.createElement('div');
+          tab.className = `month-tab ${month === selectedMonth ? 'active' : ''}`;
+          tab.textContent = `${month}月`;
+          tab.addEventListener('click', () => {
+            // 同じ月をクリックした場合は何もしない
+            if (month === selectedMonth) return;
             
-            if (jsonData.status === 'error' || !jsonData.table?.rows) {
-              return _tryFetch(names, idx+1);
-            }
+            // 月の変更
+            selectedMonth = month;
             
-            if (jsonData.table.rows.length <= 1) {
-              showEmptyDataMessage(month);
-            } else {
-              processSheetData(jsonData.table.rows, month);
-            }
-          } catch (e) {
-            console.error('JSON解析エラー:', e, '\n応答テキスト:', text.substring(0, 200) + '...');
-            throw new Error('Failed to parse JSON: ' + e.message);
-          }
-        })
-        .catch(err => {
-          console.error('Fetch error:', err);
-          
-          // タイムアウトを解除
-          clearTimeout(fetchTimeoutId);
-          fetchTimeoutId = null;
-          
-          if (typeof err === 'number' && err === 404) {
-            _tryFetch(names, idx+1);
-          } else if (err.message && err.message.includes('Invalid GViz')) {
-            _tryFetch(names, idx+1);
-          } else if (err.message && err.message.includes('parse JSON')) {
-            showProcessingError(month, 'データの形式が不正です: ' + err.message);
-          } else {
-            showFetchError(month);
-          }
-        });
-    }
-
-    function processSheetData(rows, month) {
-      try {
-        const items = [];
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row.c || !row.c[0]?.v) continue;
-          
-          // 時間または場所が空の場合はスキップ
-          if (!row.c[2]?.v || !row.c[3]?.v) continue;
-          
-          const val = row.c[0].v;
-          let dateObj;
-          let day = null;
-          
-          if (typeof val === 'object' && val && val.getDate) {
-            // Dateオブジェクトの場合
-            dateObj = val;
-            day = dateObj.getDate();
-          } else if (row.c[0].f) {
-            // "6月1日(月)" などをパース
-            const fm = row.c[0].f.match(/(\d+)月\s*(\d+)日/);
-            if (fm) {
-              day = parseInt(fm[2], 10);
-            }
-          } else if (typeof val === 'string') {
-            // "5/1" などの文字列
-            const parts = val.split('/');
-            if (parts.length === 2) {
-              day = parseInt(parts[1], 10);
-            }
-          } else if (typeof val === 'number') {
-            // 数値の可能性もある（シリアル値）
-            const tempDate = new Date(1899, 11, 30);
-            tempDate.setDate(tempDate.getDate() + val);
-            day = tempDate.getDate();
-          }
-          
-          if (!day || isNaN(day)) continue;
-          
-          // 当月分は過去日を除外
-          if (month === currentMonth && day < currentDate) continue;
-
-          items.push({
-            dateStr: `${month}/${day}`,
-            dayOfWeek: row.c[1]?.f || row.c[1]?.v || '',
-            time:        row.c[2]?.v || '',
-            location:    row.c[3]?.v || '',
-            menu:        row.c[4]?.v || '',
-            pace:        row.c[5]?.v || '',
-            strengthening: row.c[6]?.v || '',
-            notes:       row.c[7]?.v || '',
-            day
+            // タブの表示更新
+            const tabs = monthTabsEl.querySelectorAll('.month-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // タイトル更新
+            scheduleTitleEl.textContent = `${selectedMonth}月の練習予定`;
+            
+            // データ再読込
+            loadMonthData(selectedMonth);
           });
+          
+          monthTabsEl.appendChild(tab);
         }
         
-        if (items.length === 0) {
-          showEmptyDataMessage(month);
+        // 選択中のタブを中央に表示
+        setTimeout(() => {
+          const activeTab = monthTabsEl.querySelector('.month-tab.active');
+          if (activeTab) {
+            activeTab.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'center'
+            });
+          }
+        }, 100);
+      }
+      
+      // 月データの読み込み
+      function loadMonthData(month) {
+        // コンテンツリセット
+        resetContent();
+        
+        // ローディング表示
+        todayScheduleEl.innerHTML = '<div class="loading-spinner"></div>';
+        scheduleListEl.innerHTML = '<div class="loading-spinner"></div>';
+        
+        // 今日のセクションは現在の月を表示中のみ表示
+        todaySectionEl.style.display = month === currentMonth ? 'block' : 'none';
+        
+        // シート名のバリエーション
+        const possibleSheetNames = [
+          `${month}月メニュー`,
+          month < 10 ? `0${month}月メニュー` : null  // 0埋め（例: 01月メニュー）
+        ].filter(Boolean); // nullを除外
+        
+        // 各シート名を順に試行
+        tryFetchSheet(possibleSheetNames);
+      }
+      
+      // シート取得を試行
+      function tryFetchSheet(sheetNames, index = 0) {
+        // すべてのシート名を試し終わった場合
+        if (index >= sheetNames.length) {
+          showMessage('error', `${selectedMonth}月メニューが見つかりませんでした。シート名を確認してください。`);
           return;
         }
         
-        // 直近順ソート
-        items.sort((a,b) => a.day - b.day);
-
-        const todayItems = [], otherItems = [];
-        const todayKey = `${currentMonth}/${currentDate}`;
-        items.forEach(it => {
-          if (month === currentMonth && it.dateStr === todayKey) todayItems.push(it);
-          else otherItems.push(it);
-        });
-
-        if (todayItems.length > 0) {
-          displayScheduleItems(todayItems, todayScheduleElem, true);
-        } else if (month === currentMonth) {
-          todayScheduleElem.innerHTML = '<div class="empty-message">今日の練習予定はありません</div>';
-        }
-
-        if (otherItems.length > 0) {
-          displayScheduleItems(otherItems, scheduleListElem, false);
-        } else {
-          scheduleListElem.innerHTML = '<div class="empty-message">練習予定はありません</div>';
-        }
-      } catch (e) {
-        console.error('データ処理エラー:', e);
-        showProcessingError(month, 'データの処理中にエラーが発生しました: ' + e.message);
+        const sheetName = sheetNames[index];
+        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        
+        // タイムアウト設定
+        const timeoutId = setTimeout(() => {
+          showMessage('error', 'データの取得がタイムアウトしました。インターネット接続を確認してください。');
+        }, 10000);
+        
+        // データ取得
+        fetch(url)
+          .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+            return response.text();
+          })
+          .then(text => {
+            // エラーチェック
+            if (text.includes('no such sheet') || text.includes('Invalid query parameter value')) {
+              // 次のシート名を試行
+              return tryFetchSheet(sheetNames, index + 1);
+            }
+            
+            // JSON抽出
+            let jsonData;
+            try {
+              // パターン1: google.visualization.Query.setResponse(...)
+              const match = text.match(/setResponse\(([\s\S]+)\);?$/);
+              if (match) {
+                jsonData = JSON.parse(match[1]);
+              } else {
+                // パターン2: JSON部分を直接抽出
+                const jsonStart = text.indexOf('{');
+                const jsonEnd = text.lastIndexOf('}') + 1;
+                if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                  jsonData = JSON.parse(text.substring(jsonStart, jsonEnd));
+                } else {
+                  throw new Error('Invalid response format');
+                }
+              }
+            } catch (e) {
+              console.error('JSON解析エラー:', e);
+              showMessage('error', 'データの解析に失敗しました。');
+              return;
+            }
+            
+            // データチェック
+            if (jsonData.status === 'error' || !jsonData.table || !jsonData.table.rows) {
+              return tryFetchSheet(sheetNames, index + 1);
+            }
+            
+            // データ処理
+            processSheetData(jsonData.table.rows);
+          })
+          .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('Fetch error:', error);
+            showMessage('error', 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。');
+          });
       }
-    }
-
-    function displayScheduleItems(list, container, isToday) {
-      container.innerHTML = '';
-      list.forEach((it, idx) => {
-        const id = `${isToday?'today':'sch'}-${idx}`;
-        const card = document.createElement('div');
-        card.className = `card ${isToday?'today-card':''}`;
-        card.innerHTML = `
-          <div class="p-4 cursor-pointer" onclick="toggleDetails('${id}')">
+      
+      // シートデータの処理
+      function processSheetData(rows) {
+        try {
+          // 練習データを抽出
+          const scheduleItems = [];
+          
+          // 最初の行はヘッダー行なのでスキップ
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            
+            // 必須項目チェック
+            if (!row.c || !row.c[0] || !row.c[0].v) continue;
+            if (!row.c[2] || !row.c[2].v || !row.c[3] || !row.c[3].v) continue; // 時間と場所は必須
+            
+            // 日付の処理
+            const dateValue = row.c[0].v;
+            let day = null;
+            
+            // 日付形式の判定と変換
+            if (dateValue instanceof Date) {
+              // Dateオブジェクト
+              day = dateValue.getDate();
+            } else if (row.c[0].f) {
+              // フォーマット済み文字列（例: "6月1日(月)"）
+              const match = row.c[0].f.match(/(\d+)月\s*(\d+)日/);
+              if (match) day = parseInt(match[2], 10);
+            } else if (typeof dateValue === 'string') {
+              // 文字列（例: "5/1"）
+              const parts = dateValue.split('/');
+              if (parts.length === 2) day = parseInt(parts[1], 10);
+            } else if (typeof dateValue === 'number') {
+              // 数値（シリアル値）
+              const temp = new Date(1899, 11, 30);
+              temp.setDate(temp.getDate() + dateValue);
+              day = temp.getDate();
+            }
+            
+            // 無効な日付はスキップ
+            if (!day || isNaN(day) || day < 1 || day > 31) continue;
+            
+            // 当月分の場合、過去の日付はスキップ
+            if (selectedMonth === currentMonth && day < currentDate) continue;
+            
+            // 練習データの追加
+            scheduleItems.push({
+              day: day,
+              dateStr: `${selectedMonth}/${day}`,
+              dayOfWeek: row.c[1]?.f || row.c[1]?.v || '',
+              time: row.c[2]?.v || '',
+              location: row.c[3]?.v || '',
+              menu: row.c[4]?.v || '',
+              pace: row.c[5]?.v || '',
+              strengthening: row.c[6]?.v || '',
+              notes: row.c[7]?.v || ''
+            });
+          }
+          
+          // データがない場合
+          if (scheduleItems.length === 0) {
+            showMessage('info', '練習予定はありません');
+            return;
+          }
+          
+          // 日付順ソート
+          scheduleItems.sort((a, b) => a.day - b.day);
+          
+          // 今日の練習と他の練習に分ける
+          const todayItems = [];
+          const otherItems = [];
+          
+          // 今日の日付
+          const todayKey = `${currentMonth}/${currentDate}`;
+          
+          scheduleItems.forEach(item => {
+            if (selectedMonth === currentMonth && item.dateStr === todayKey) {
+              todayItems.push(item);
+            } else {
+              otherItems.push(item);
+            }
+          });
+          
+          // 今日の練習の表示（現在の月を表示中の場合のみ）
+          if (selectedMonth === currentMonth) {
+            if (todayItems.length > 0) {
+              renderScheduleCards(todayItems, todayScheduleEl, true);
+            } else {
+              todayScheduleEl.innerHTML = '<div class="info-message">今日の練習予定はありません</div>';
+            }
+          }
+          
+          // 練習予定の表示
+          if (otherItems.length > 0) {
+            renderScheduleCards(otherItems, scheduleListEl, false);
+          } else {
+            scheduleListEl.innerHTML = '<div class="info-message">練習予定はありません</div>';
+          }
+        } catch (error) {
+          console.error('データ処理エラー:', error);
+          showMessage('error', 'データの処理中にエラーが発生しました。');
+        }
+      }
+      
+      // 練習カードのレンダリング
+      function renderScheduleCards(items, container, isToday) {
+        container.innerHTML = '';
+        
+        items.forEach((item, index) => {
+          // カードID
+          const cardId = `${isToday ? 'today' : 'schedule'}-${index}`;
+          
+          // カード要素
+          const card = document.createElement('div');
+          card.className = `schedule-card ${isToday ? 'today-card' : ''}`;
+          
+          // カードヘッダー
+          const header = document.createElement('div');
+          header.className = 'card-header';
+          header.innerHTML = `
             <div class="flex justify-between items-center">
-              <div class="flex items-center space-x-4">
-                <span class="date-badge">${it.dateStr} (${it.dayOfWeek})</span>
-                <span class="text-sm">${it.time}</span>
+              <div class="flex items-center space-x-3">
+                <span class="date-badge">${item.dateStr} (${item.dayOfWeek})</span>
+                <span class="text-sm">${item.time}</span>
               </div>
               <div class="flex items-center">
-                <span class="location-badge mr-2">${it.location}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" id="icon-${id}" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                <span class="location-badge mr-2">${item.location}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" id="icon-${cardId}" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                 </svg>
               </div>
             </div>
-          </div>
-          <div id="details-${id}" class="details border-t">
-            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50">
+          `;
+          
+          // カードコンテンツ
+          const content = document.createElement('div');
+          content.className = 'card-content';
+          content.id = `content-${cardId}`;
+          content.innerHTML = `
+            <div class="detail-grid">
               <div>
                 <div class="detail-label">練習メニュー</div>
-                <div class="detail-content">${it.menu||'情報なし'}</div>
+                <div class="detail-content">${item.menu || '情報なし'}</div>
+                
                 <div class="detail-label">ペース</div>
-                <div class="detail-content">${it.pace||'情報なし'}</div>
+                <div class="detail-content">${item.pace || '情報なし'}</div>
               </div>
               <div>
                 <div class="detail-label">補強</div>
-                <div class="detail-content">${it.strengthening||'情報なし'}</div>
+                <div class="detail-content">${item.strengthening || '情報なし'}</div>
+                
                 <div class="detail-label">補足</div>
-                <div class="detail-content">${it.notes||'情報なし'}</div>
+                <div class="detail-content">${item.notes || '情報なし'}</div>
               </div>
             </div>
-          </div>`;
-        container.appendChild(card);
-      });
-    }
-
-    function showSheetNotFoundError(month) {
-      const errorMessage = `「${month}月メニュー」というシートが見つかりませんでした。シート名を確認してください。`;
-      
-      if (month === currentMonth) {
-          todayScheduleElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+          `;
+          
+          // 詳細表示切り替え
+          header.addEventListener('click', () => {
+            const isActive = content.classList.toggle('active');
+            const icon = document.getElementById(`icon-${cardId}`);
+            
+            if (isActive) {
+              icon.innerHTML = '<path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />';
+            } else {
+              icon.innerHTML = '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />';
+            }
+          });
+          
+          // カード組み立て
+          card.appendChild(header);
+          card.appendChild(content);
+          container.appendChild(card);
+        });
       }
       
-      scheduleListElem.innerHTML = `<div class="error-message">${errorMessage}</div>`;
-    }
-    
-    function showEmptyDataMessage(month) {
-      if (month === currentMonth) {
-          todayScheduleElem.innerHTML = '<div class="empty-message">練習データがありません</div>';
+      // コンテンツのリセット
+      function resetContent() {
+        todayScheduleEl.innerHTML = '';
+        scheduleListEl.innerHTML = '';
       }
       
-      scheduleListElem.innerHTML = '<div class="empty-message">練習データがありません</div>';
-    }
-    
-    function showProcessingError(month, message = 'データの処理中にエラーが発生しました。データ形式を確認してください。') {
-      if (month === currentMonth) {
-          todayScheduleElem.innerHTML = `<div class="error-message">${message}</div>`;
+      // メッセージ表示
+      function showMessage(type, message) {
+        const messageHTML = `<div class="${type}-message">${message}</div>`;
+        
+        if (selectedMonth === currentMonth) {
+          todayScheduleEl.innerHTML = messageHTML;
+        }
+        
+        scheduleListEl.innerHTML = messageHTML;
       }
-      
-      scheduleListElem.innerHTML = `<div class="error-message">${message}</div>`;
-    }
-    
-    function showFetchError(month, message = 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。') {
-      if (month === currentMonth) {
-          todayScheduleElem.innerHTML = `<div class="error-message">${message}</div>`;
-      }
-      
-      scheduleListElem.innerHTML = `<div class="error-message">${message}</div>`;
-    }
-
-    // 詳細の切り替え関数をグローバルスコープに追加
-    window.toggleDetails = function(id) {
-      const det = document.getElementById(`details-${id}`);
-      const ico = document.getElementById(`icon-${id}`);
-      if (det.classList.contains('active')) {
-        det.classList.remove('active');
-        ico.innerHTML = '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>';
-      } else {
-        det.classList.add('active');
-        ico.innerHTML = '<path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>';
-      }
-    };
-  });
+    });
   </script>
 </body>
 </html>
