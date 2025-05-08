@@ -3,91 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>練習メニュー</title>
+    <title>TUATTF 練習スケジュール</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .card {
-            transition: transform 0.3s ease;
+        :root {
+            --primary-color: #ff6b35;
+            --secondary-color: #f7c59f;
+            --accent-color: #004e89;
+            --background-color: #efefef;
+            --text-color: #2b2d42;
         }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .header-bg {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        }
+        
         .card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
         }
+        
+        .card-header {
+            border-radius: 12px 12px 0 0;
+        }
+        
         .details {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.5s ease;
+            transition: max-height 0.5s ease, opacity 0.3s ease;
+            opacity: 0;
         }
+        
         .details.active {
             max-height: 500px;
+            opacity: 1;
         }
-        body {
-            background-color: #f0f4f8;
+        
+        .next-practice {
+            position: relative;
+            border: 2px solid var(--accent-color);
+            animation: pulse 2s infinite;
         }
-        .header-bg {
-            background: linear-gradient(135deg, #4a6fa5 0%, #2c3e50 100%);
+        
+        .next-practice::before {
+            content: "次回練習";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 10;
         }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 78, 137, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 78, 137, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 78, 137, 0);
+            }
+        }
+        
         .loader {
             border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
+            border-top: 5px solid var(--primary-color);
             border-radius: 50%;
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .date-badge {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .day-of-week {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .menu-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            margin-right: 8px;
+            color: white;
+        }
+        
+        .icon-run { background-color: #4CAF50; }
+        .icon-pace { background-color: #9C27B0; }
+        .icon-strength { background-color: #F44336; }
+        .icon-info { background-color: #2196F3; }
+        
+        .tab-selector {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        
+        .tab-selector::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab-option {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-option.active {
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: bold;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gray-100">
-    <header class="header-bg text-white p-4 shadow-lg">
+<body>
+    <header class="header-bg text-white p-6 shadow-lg">
         <div class="container mx-auto">
-            <h1 class="text-3xl font-bold">練習メニュー管理</h1>
-            <p class="mt-2">練習スケジュールと詳細</p>
+            <h1 class="text-3xl font-bold tracking-wide">TUATTF 練習スケジュール</h1>
+            <p class="mt-2 opacity-90">農工大トライアスロン同好会</p>
         </div>
     </header>
 
-    <main class="container mx-auto py-6 px-4">
+    <main class="container mx-auto py-8 px-4">
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-800">
-                    <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>練習スケジュール
+            <div class="flex flex-wrap justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>練習メニュー
                 </h2>
-                <div class="relative">
-                    <select id="sheetSelector" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                        <option value="n月メニュー" selected>n月メニュー</option>
-                    </select>
+                <div id="currentDate" class="text-sm text-gray-600 font-medium bg-gray-100 rounded-full px-4 py-2 mt-2 sm:mt-0">
+                    <i class="far fa-calendar mr-2"></i>Loading...
                 </div>
             </div>
             
+            <div class="tab-selector mb-6">
+                <div id="sheetTab" class="tab-option active" data-sheet="n月メニュー">n月メニュー</div>
+                <!-- 追加のタブはここに追加されます -->
+            </div>
+            
             <div id="loading" class="loader"></div>
-            <div id="scheduleContainer" class="grid grid-cols-1 gap-4"></div>
+            <div id="scheduleContainer" class="grid grid-cols-1 gap-6"></div>
         </div>
     </main>
 
-    <footer class="bg-gray-800 text-white p-4 mt-auto">
-        <div class="container mx-auto text-center">
-            <p>&copy; 2025 練習メニュー管理システム</p>
+    <footer class="bg-gray-800 text-white p-6 mt-8">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold mb-2">TUATTF</h3>
+                    <p class="text-gray-300">東京農工大学トライアスロン同好会</p>
+                </div>
+                <div class="text-center md:text-right">
+                    <p>&copy; 2025 TUATTF All Rights Reserved</p>
+                </div>
+            </div>
         </div>
     </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const scheduleContainer = document.getElementById('scheduleContainer');
-            const sheetSelector = document.getElementById('sheetSelector');
             const loading = document.getElementById('loading');
+            const currentDateElement = document.getElementById('currentDate');
+            
+            // 現在の日付を表示
+            const now = new Date();
+            currentDateElement.innerHTML = `<i class="far fa-calendar mr-2"></i>${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
             
             // スプレッドシートのIDを設定
             const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
             let currentSheet = 'n月メニュー';
 
-            // シート選択が変更されたとき
-            sheetSelector.addEventListener('change', function() {
-                currentSheet = this.value;
-                fetchAndDisplayData(currentSheet);
+            // タブ選択の処理
+            document.querySelectorAll('.tab-option').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-option').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentSheet = this.dataset.sheet;
+                    fetchAndDisplayData(currentSheet);
+                });
             });
 
             // データを取得して表示する関数
@@ -132,7 +270,7 @@
                                 const parts = dateStr.split('/');
                                 if (parts.length === 2) {
                                     const currentYear = new Date().getFullYear();
-                                    dateObj = new Date(currentYear, parts[0] - 1, parts[1]);
+                                    dateObj = new Date(currentYear, parseInt(parts[0]) - 1, parseInt(parts[1]));
                                 }
                             }
                             
@@ -149,47 +287,89 @@
                             });
                         }
                         
-                        // 日付で降順ソート（最新の練習が上に来るように）
-                        scheduleItems.sort((a, b) => b.date - a.date);
+                        // 現在の日付を取得
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        // 将来の練習と過去の練習に分ける
+                        const futurePractices = scheduleItems.filter(item => item.date >= today);
+                        const pastPractices = scheduleItems.filter(item => item.date < today);
+                        
+                        // 将来の練習は日付の昇順（近い日順）、過去の練習は日付の降順（最近の日順）
+                        futurePractices.sort((a, b) => a.date - b.date);
+                        pastPractices.sort((a, b) => b.date - a.date);
+                        
+                        // 将来の練習を先に、その後に過去の練習を表示
+                        const sortedScheduleItems = [...futurePractices, ...pastPractices];
+                        
+                        // 練習がない場合のメッセージ
+                        if (sortedScheduleItems.length === 0) {
+                            scheduleContainer.innerHTML = '<div class="text-center p-8 bg-gray-100 rounded-lg"><p class="text-gray-600">練習の予定はありません。</p></div>';
+                            loading.style.display = 'none';
+                            return;
+                        }
                         
                         // 画面に表示
-                        scheduleItems.forEach((item, index) => {
+                        sortedScheduleItems.forEach((item, index) => {
+                            const isNextPractice = index === 0 && item.date >= today;
+                            
                             const card = document.createElement('div');
-                            card.className = 'card bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md p-4';
+                            card.className = `card bg-white rounded-lg overflow-hidden ${isNextPractice ? 'next-practice' : ''}`;
+                            
+                            // 日付フォーマットの整形
+                            const dateFormatted = item.dateStr;
+                            
                             card.innerHTML = `
                                 <div class="cursor-pointer" onclick="toggleDetails(${index})">
-                                    <div class="flex flex-wrap md:flex-nowrap justify-between items-center">
-                                        <div class="flex items-center mb-2 md:mb-0">
-                                            <div class="bg-blue-100 text-blue-800 font-bold rounded-lg p-2 mr-3">
-                                                ${item.dateStr}<br>${item.dayOfWeek}
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-600"><i class="far fa-clock mr-1"></i> ${item.time}</p>
-                                                <p class="text-gray-800"><i class="fas fa-map-marker-alt mr-1 text-red-500"></i> ${item.location}</p>
-                                            </div>
+                                    <div class="flex flex-wrap md:flex-nowrap p-4">
+                                        <div class="date-badge w-20 h-20 flex flex-col justify-center mr-4 flex-shrink-0">
+                                            <div class="text-xl font-bold">${dateFormatted}</div>
+                                            <div class="day-of-week">${item.dayOfWeek}</div>
                                         </div>
-                                        <div class="mt-2 md:mt-0">
-                                            <span class="text-blue-600 hover:text-blue-800">
-                                                詳細を表示 <i class="fas fa-chevron-down" id="icon-${index}"></i>
-                                            </span>
+                                        <div class="flex-grow">
+                                            <div class="flex flex-wrap items-center mb-2">
+                                                <div class="mr-4 mb-2 md:mb-0">
+                                                    <p class="text-gray-600 flex items-center">
+                                                        <i class="far fa-clock mr-1"></i> ${item.time}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-gray-800 font-medium flex items-center">
+                                                        <i class="fas fa-map-marker-alt mr-1 text-red-500"></i> ${item.location}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 text-right">
+                                                <span class="text-accent-color hover:text-blue-800 flex items-center justify-end">
+                                                    詳細を表示 <i class="fas fa-chevron-down ml-1" id="icon-${index}"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div id="details-${index}" class="details mt-4 pt-4 border-t border-gray-200">
+                                <div id="details-${index}" class="details p-4 bg-gray-50 border-t border-gray-200">
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <h3 class="font-semibold text-gray-700"><i class="fas fa-running mr-1 text-green-600"></i> 練習メニュー</h3>
-                                            <p class="text-gray-800 mb-3">${item.menu || '情報なし'}</p>
+                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                                <span class="menu-icon icon-run"><i class="fas fa-running"></i></span>練習メニュー
+                                            </h3>
+                                            <p class="text-gray-800 mb-4 pl-9">${item.menu || '情報なし'}</p>
                                             
-                                            <h3 class="font-semibold text-gray-700"><i class="fas fa-tachometer-alt mr-1 text-purple-600"></i> ペース</h3>
-                                            <p class="text-gray-800">${item.pace || '情報なし'}</p>
+                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                                <span class="menu-icon icon-pace"><i class="fas fa-tachometer-alt"></i></span>ペース
+                                            </h3>
+                                            <p class="text-gray-800 pl-9">${item.pace || '情報なし'}</p>
                                         </div>
                                         <div>
-                                            <h3 class="font-semibold text-gray-700"><i class="fas fa-dumbbell mr-1 text-red-600"></i> 補強</h3>
-                                            <p class="text-gray-800 mb-3">${item.strengthening || '情報なし'}</p>
+                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                                <span class="menu-icon icon-strength"><i class="fas fa-dumbbell"></i></span>補強
+                                            </h3>
+                                            <p class="text-gray-800 mb-4 pl-9">${item.strengthening || '情報なし'}</p>
                                             
-                                            <h3 class="font-semibold text-gray-700"><i class="fas fa-info-circle mr-1 text-blue-600"></i> 補足</h3>
-                                            <p class="text-gray-800">${item.notes || '情報なし'}</p>
+                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                                <span class="menu-icon icon-info"><i class="fas fa-info-circle"></i></span>補足
+                                            </h3>
+                                            <p class="text-gray-800 pl-9">${item.notes || '情報なし'}</p>
                                         </div>
                                     </div>
                                 </div>
