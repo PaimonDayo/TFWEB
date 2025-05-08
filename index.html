@@ -147,7 +147,7 @@
         </div>
         
         <div id="scheduleContainer">
-            <h2 class="section-title">練習予定</h2>
+            <h2 id="scheduleTitle" class="section-title">練習予定</h2>
             <div id="allSchedule">
                 <div class="loader"></div>
             </div>
@@ -160,6 +160,7 @@
             const allSchedule = document.getElementById('allSchedule');
             const currentDateElement = document.getElementById('currentDate');
             const sheetSelector = document.getElementById('sheetSelector');
+            const scheduleTitle = document.getElementById('scheduleTitle');
             
             // 現在の日時を取得
             const now = new Date();
@@ -170,15 +171,24 @@
             // 今日の日付を表示
             currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
             
-            // 利用可能なシート名の配列（初期値として現在の月と前後の月を含める）
-            const availableSheets = [
-                {id: `${currentMonth-1 > 0 ? currentMonth-1 : 12}月メニュー`, name: `${currentMonth-1 > 0 ? currentMonth-1 : 12}月`},
-                {id: `${currentMonth}月メニュー`, name: `${currentMonth}月`},
-                {id: `${currentMonth+1 <= 12 ? currentMonth+1 : 1}月メニュー`, name: `${currentMonth+1 <= 12 ? currentMonth+1 : 1}月`}
+            // 利用可能なシート情報
+            const availableMonths = [
+                {month: 1, name: "1月"},
+                {month: 2, name: "2月"},
+                {month: 3, name: "3月"},
+                {month: 4, name: "4月"},
+                {month: 5, name: "5月"},
+                {month: 6, name: "6月"},
+                {month: 7, name: "7月"},
+                {month: 8, name: "8月"},
+                {month: 9, name: "9月"},
+                {month: 10, name: "10月"},
+                {month: 11, name: "11月"},
+                {month: 12, name: "12月"}
             ];
             
-            // 現在のシート名（デフォルトは現在の月）
-            let currentSheet = `${currentMonth}月メニュー`;
+            // 現在のシート（デフォルトは現在の月）
+            let selectedMonth = currentMonth;
             
             // シートセレクタを生成
             generateSheetSelector();
@@ -190,18 +200,34 @@
             function generateSheetSelector() {
                 sheetSelector.innerHTML = '';
                 
-                availableSheets.forEach(sheet => {
+                // 現在の月から前後の月を表示
+                const prevMonth = selectedMonth - 1 > 0 ? selectedMonth - 1 : 12;
+                const nextMonth = selectedMonth + 1 <= 12 ? selectedMonth + 1 : 1;
+                
+                const months = [prevMonth, selectedMonth, nextMonth];
+                
+                months.forEach(month => {
+                    const monthInfo = availableMonths.find(m => m.month === month);
+                    
                     const option = document.createElement('div');
-                    option.className = `sheet-option ${sheet.id === currentSheet ? 'active' : ''}`;
-                    option.textContent = sheet.name;
-                    option.dataset.sheetId = sheet.id;
+                    option.className = `sheet-option ${month === selectedMonth ? 'active' : ''}`;
+                    option.textContent = monthInfo.name;
+                    option.dataset.month = month;
                     
                     option.addEventListener('click', function() {
-                        currentSheet = this.dataset.sheetId;
+                        selectedMonth = parseInt(this.dataset.month);
                         document.querySelectorAll('.sheet-option').forEach(opt => {
                             opt.classList.remove('active');
                         });
                         this.classList.add('active');
+                        
+                        // シートセレクタを更新
+                        generateSheetSelector();
+                        
+                        // タイトルを更新
+                        scheduleTitle.textContent = `${selectedMonth}月の練習予定`;
+                        
+                        // データを再取得
                         fetchAndDisplayData();
                     });
                     
@@ -214,9 +240,15 @@
                 // ローダーを表示
                 todaySchedule.innerHTML = '<div class="loader"></div>';
                 allSchedule.innerHTML = '<div class="loader"></div>';
+                
+                // シート名を設定
+                const sheetName = `${selectedMonth}月メニュー`;
+
+                // タイトルを更新
+                scheduleTitle.textContent = `${selectedMonth}月の練習予定`;
 
                 // Google Sheetsから公開データを取得するURLを構築
-                const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(currentSheet)}`;
+                const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
 
                 fetch(url)
                     .then(response => response.text())
@@ -246,14 +278,23 @@
                                 const strengthening = row.c[6]?.v || '';
                                 const notes = row.c[7]?.v || '';
                                 
+                                // 時間または場所が空の場合はスキップ
+                                if (!time || !location) continue;
+                                
                                 // 日付文字列を解析して日付番号を取得
                                 const dateParts = dateStr.split('/');
-                                let day = 0;
+                                let month, day;
+                                
                                 if (dateParts.length === 2) {
+                                    month = parseInt(dateParts[0]);
                                     day = parseInt(dateParts[1]);
+                                    
+                                    // 無効な日付はスキップ
+                                    if (isNaN(month) || isNaN(day)) continue;
                                 }
                                 
                                 scheduleItems.push({
+                                    month: month,
                                     day: day,
                                     dateStr: dateStr,
                                     dayOfWeek: dayOfWeek,
@@ -266,9 +307,6 @@
                                 });
                             }
                             
-                            // 選択中の月を取得
-                            const selectedMonth = parseInt(currentSheet.match(/(\d+)/)[0]);
-                            
                             // 今日の練習をフィルタリング（選択中の月が現在の月と同じ場合のみ）
                             const todayItems = [];
                             if (selectedMonth === currentMonth) {
@@ -280,6 +318,10 @@
                                 });
                             }
                             
+                            // 今日のコンテナの表示/非表示
+                            document.getElementById('todayContainer').style.display = 
+                                selectedMonth === currentMonth ? 'block' : 'none';
+                            
                             // 日付順にソート
                             scheduleItems.sort((a, b) => a.day - b.day);
                             
@@ -290,7 +332,7 @@
                                     const card = createScheduleCard(item, index, 'today');
                                     todaySchedule.appendChild(card);
                                 });
-                            } else {
+                            } else if (selectedMonth === currentMonth) {
                                 todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
                             }
                             
@@ -309,13 +351,17 @@
                             }
                         } catch (error) {
                             console.error('データの処理中にエラーが発生しました:', error);
-                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
+                            if (selectedMonth === currentMonth) {
+                                todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
+                            }
                             allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
                         }
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
-                        todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        if (selectedMonth === currentMonth) {
+                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        }
                         allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
                     });
             }
