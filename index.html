@@ -78,6 +78,11 @@
       background-color: #f0f9ff;
     }
 
+    .past-card {
+      opacity: 0.6;
+      border-left: 4px solid #d1d5db;
+    }
+
     .card-header {
       padding: 1rem;
       cursor: pointer;
@@ -156,6 +161,15 @@
       border-bottom: 2px solid var(--gray-mid);
     }
 
+    .section-subtitle {
+      font-weight: 500;
+      font-size: 1rem;
+      margin: 1.5rem 0 1rem;
+      color: var(--text-mid);
+      padding-left: 0.5rem;
+      border-left: 3px solid var(--gray-mid);
+    }
+
     /* ディテール */
     .detail-grid {
       display: grid;
@@ -219,10 +233,16 @@
       <div id="today-schedule"></div>
     </div>
     
-    <!-- 練習予定 -->
-    <div id="schedule-section">
-      <h2 id="schedule-title" class="section-title">練習予定</h2>
-      <div id="schedule-list"></div>
+    <!-- 今後の練習予定 -->
+    <div id="future-section">
+      <h2 id="future-title" class="section-title">今後の練習予定</h2>
+      <div id="future-list"></div>
+    </div>
+
+    <!-- 過去の練習 -->
+    <div id="past-section">
+      <h2 id="past-title" class="section-subtitle">過去の練習</h2>
+      <div id="past-list"></div>
     </div>
     
     <!-- デバッグ情報 (開発時のみ表示) -->
@@ -261,8 +281,10 @@
       const monthTabsEl = document.getElementById('month-tabs');
       const todaySectionEl = document.getElementById('today-section');
       const todayScheduleEl = document.getElementById('today-schedule');
-      const scheduleTitleEl = document.getElementById('schedule-title');
-      const scheduleListEl = document.getElementById('schedule-list');
+      const futureSectionEl = document.getElementById('future-section');
+      const futureListEl = document.getElementById('future-list');
+      const pastSectionEl = document.getElementById('past-section');
+      const pastListEl = document.getElementById('past-list');
       
       // 共通変数
       const SPREADSHEET_ID = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
@@ -271,11 +293,15 @@
       const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
       const currentDate = now.getDate();
       
+      // 今日の日付をYYYY-MM-DDの形式で取得（比較用）
+      const todayDateKey = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      ).getTime();
+      
       // 選択中の月（デフォルトは現在の月）
       let selectedMonth = currentMonth;
-      
-      // CORS対応用のプロキシURL (必要に応じて)
-      // const CORS_PROXY = 'https://corsproxy.io/?';
       
       // アプリケーション初期化
       init();
@@ -313,9 +339,6 @@
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
-            // タイトル更新
-            scheduleTitleEl.textContent = `${selectedMonth}月の練習予定`;
-            
             // データ再読込
             loadMonthData(selectedMonth);
           });
@@ -343,7 +366,7 @@
         
         // ローディング表示
         todayScheduleEl.innerHTML = '<div class="loading-spinner"></div>';
-        scheduleListEl.innerHTML = '<div class="loading-spinner"></div>';
+        futureListEl.innerHTML = '<div class="loading-spinner"></div>';
         
         // 今日のセクションは現在の月を表示中のみ表示
         todaySectionEl.style.display = month === currentMonth ? 'block' : 'none';
@@ -481,9 +504,6 @@
               continue;
             }
             
-            // 当月分は過去の日付はスキップ（オプション）
-            // if (selectedMonth === currentMonth && day < currentDate) continue;
-            
             // 曜日の取得
             const dayOfWeek = columns[1]?.trim() || '';
             
@@ -497,7 +517,9 @@
               menu: columns[4]?.trim() || '',
               pace: columns[5]?.trim() || '',
               strengthening: columns[6]?.trim() || '',
-              notes: columns[7]?.trim() || ''
+              notes: columns[7]?.trim() || '',
+              // 比較用の日付キー（過去/未来の判定に使用）
+              dateKey: new Date(currentYear, selectedMonth - 1, day).getTime()
             });
           }
           
@@ -505,48 +527,65 @@
           if (scheduleItems.length === 0) {
             debugLog('有効な練習データがありません');
             showMessage('info', '練習予定はありません');
+            pastSectionEl.style.display = 'none';
             return;
           }
           
           debugLog(`${scheduleItems.length}件の練習データを取得しました`);
           
-          // 日付順ソート
-          scheduleItems.sort((a, b) => a.day - b.day);
-          
-          // 今日の練習と他の練習に分ける
+          // 今日/将来/過去の練習に分ける
           const todayItems = [];
-          const otherItems = [];
+          const futureItems = [];
+          const pastItems = [];
           
-          // 今日の日付
-          const todayKey = `${currentMonth}/${currentDate}`;
-          
+          // 分類
           scheduleItems.forEach(item => {
-            if (selectedMonth === currentMonth && item.dateStr === todayKey) {
+            if (item.dateKey === todayDateKey && selectedMonth === currentMonth) {
+              // 今日の練習（現在の月のみ）
               todayItems.push(item);
+            } else if (item.dateKey > todayDateKey) {
+              // 将来の練習
+              futureItems.push(item);
             } else {
-              otherItems.push(item);
+              // 過去の練習
+              pastItems.push(item);
             }
           });
+          
+          // 将来の練習は日付の昇順（近い日が先）
+          futureItems.sort((a, b) => a.dateKey - b.dateKey);
+          
+          // 過去の練習は日付の降順（新しい日が先）
+          pastItems.sort((a, b) => b.dateKey - a.dateKey);
           
           // 今日の練習の表示（現在の月を表示中の場合のみ）
           if (selectedMonth === currentMonth) {
             if (todayItems.length > 0) {
-              renderScheduleCards(todayItems, todayScheduleEl, true);
+              renderScheduleCards(todayItems, todayScheduleEl, 'today');
             } else {
               todayScheduleEl.innerHTML = '<div class="info-message">今日の練習予定はありません</div>';
             }
           }
           
-          // 練習予定の表示
-          if (otherItems.length > 0) {
-            renderScheduleCards(otherItems, scheduleListEl, false);
+          // 将来の練習の表示
+          if (futureItems.length > 0) {
+            renderScheduleCards(futureItems, futureListEl, 'future');
           } else {
-            scheduleListEl.innerHTML = '<div class="info-message">練習予定はありません</div>';
+            futureListEl.innerHTML = '<div class="info-message">今後の練習予定はありません</div>';
+          }
+          
+          // 過去の練習の表示
+          if (pastItems.length > 0) {
+            pastSectionEl.style.display = 'block';
+            renderScheduleCards(pastItems, pastListEl, 'past');
+          } else {
+            pastSectionEl.style.display = 'none';
           }
         } catch (error) {
           console.error('CSV解析エラー:', error);
           debugLog('CSVデータの解析に失敗しました:', error.message);
           showMessage('error', 'データの処理中にエラーが発生しました。');
+          pastSectionEl.style.display = 'none';
         }
       }
       
@@ -577,16 +616,16 @@
       }
       
       // 練習カードのレンダリング
-      function renderScheduleCards(items, container, isToday) {
+      function renderScheduleCards(items, container, type) {
         container.innerHTML = '';
         
         items.forEach((item, index) => {
           // カードID
-          const cardId = `${isToday ? 'today' : 'schedule'}-${index}`;
+          const cardId = `${type}-${index}`;
           
           // カード要素
           const card = document.createElement('div');
-          card.className = `schedule-card ${isToday ? 'today-card' : ''}`;
+          card.className = `schedule-card ${type === 'today' ? 'today-card' : type === 'past' ? 'past-card' : ''}`;
           
           // カードヘッダー
           const header = document.createElement('div');
@@ -651,7 +690,9 @@
       // コンテンツのリセット
       function resetContent() {
         todayScheduleEl.innerHTML = '';
-        scheduleListEl.innerHTML = '';
+        futureListEl.innerHTML = '';
+        pastListEl.innerHTML = '';
+        pastSectionEl.style.display = 'none';
       }
       
       // メッセージ表示
@@ -662,7 +703,8 @@
           todayScheduleEl.innerHTML = messageHTML;
         }
         
-        scheduleListEl.innerHTML = messageHTML;
+        futureListEl.innerHTML = messageHTML;
+        pastSectionEl.style.display = 'none';
       }
     });
   </script>
