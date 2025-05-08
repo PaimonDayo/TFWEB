@@ -8,86 +8,151 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f9fafb;
+            background-color: #f5f7fa;
+            color: #334155;
         }
+        
+        .container {
+            max-width: 768px;
+        }
+        
         .card {
-            transition: box-shadow 0.2s ease;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 8px;
         }
+        
         .card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
         }
+        
+        .today-card {
+            background: linear-gradient(to right, #f0f9ff, #e0f2fe);
+            border-left: 3px solid #0ea5e9;
+        }
+        
+        .next-practice {
+            background: linear-gradient(to right, #f0fdf4, #dcfce7);
+            border-left: 3px solid #22c55e;
+        }
+        
         .details {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+            opacity: 0;
         }
+        
         .details.active {
             max-height: 500px;
+            opacity: 1;
         }
-        .next-practice {
-            border-left: 4px solid #3b82f6;
-        }
+        
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
             width: 30px;
             height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+            border: 3px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.8s linear infinite;
+            margin: 2rem auto;
         }
+        
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .date-badge {
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            padding: 0.25rem 0.5rem;
+            font-weight: 500;
+        }
+        
+        .location-badge {
+            color: #475569;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+        
+        .chevron.up {
+            transform: rotate(-180deg);
+        }
+
+        .section-title {
+            position: relative;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 0;
+            width: 3rem;
+            height: 2px;
+            background-color: #3b82f6;
         }
     </style>
 </head>
 <body>
-    <header class="bg-white border-b p-4">
-        <div class="container mx-auto">
+    <header class="bg-white border-b py-4 shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4">
             <h1 class="text-xl font-bold text-gray-800">TUATTF 練習スケジュール</h1>
         </div>
     </header>
 
     <main class="container mx-auto py-6 px-4">
-        <div class="bg-white rounded shadow-sm p-4 mb-4">
-            <div class="flex flex-wrap justify-between items-center mb-4">
-                <div id="currentDate" class="text-sm text-gray-600"></div>
-                <select id="sheetSelector" class="text-sm border rounded p-1">
-                    <option value="n月メニュー" selected>n月メニュー</option>
-                </select>
+        <div id="currentDate" class="text-sm text-gray-500 mb-6"></div>
+        
+        <div id="todayContainer" class="mb-6">
+            <h2 class="section-title">今日の練習</h2>
+            <div id="todaySchedule" class="space-y-2">
+                <div class="loader"></div>
             </div>
-            
-            <div id="loading" class="loader"></div>
-            <div id="scheduleContainer" class="space-y-4"></div>
+        </div>
+        
+        <div id="upcomingContainer">
+            <h2 class="section-title">今後の練習</h2>
+            <div id="upcomingSchedule" class="space-y-2">
+                <div class="loader"></div>
+            </div>
         </div>
     </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const scheduleContainer = document.getElementById('scheduleContainer');
-            const sheetSelector = document.getElementById('sheetSelector');
-            const loading = document.getElementById('loading');
+            const todaySchedule = document.getElementById('todaySchedule');
+            const upcomingSchedule = document.getElementById('upcomingSchedule');
             const currentDateElement = document.getElementById('currentDate');
             
-            // 現在の日付を表示
+            // 現在の日時を取得
             const now = new Date();
-            currentDateElement.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+            const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
+            const currentDate = now.getDate();
             
-            // スプレッドシートのIDを設定
+            // 今日の日付を表示
+            currentDateElement.textContent = `${now.getFullYear()}年${currentMonth}月${currentDate}日`;
+            
+            // 当月のシート名を設定（例：5月メニュー）
+            const sheetName = `${currentMonth}月メニュー`;
+            
+            // スプレッドシートのID
             const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
-            let currentSheet = 'n月メニュー';
-
-            // シート選択が変更されたとき
-            sheetSelector.addEventListener('change', function() {
-                currentSheet = this.value;
-                fetchAndDisplayData(currentSheet);
-            });
 
             // データを取得して表示する関数
-            function fetchAndDisplayData(sheetName) {
-                loading.style.display = 'block';
-                scheduleContainer.innerHTML = '';
+            function fetchAndDisplayData() {
+                // ローダーを表示
+                todaySchedule.innerHTML = '<div class="loader"></div>';
+                upcomingSchedule.innerHTML = '<div class="loader"></div>';
 
                 // Google Sheetsから公開データを取得するURLを構築
                 const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -107,8 +172,8 @@
                         for (let i = 1; i < rows.length; i++) {
                             const row = rows[i];
                             
-                            // 空の行をスキップ
-                            if (!row.c[0] || !row.c[0].v) continue;
+                            // 空の行または必須項目が空の行をスキップ
+                            if (!row.c[0] || !row.c[0].v || !row.c[2] || !row.c[3]) continue;
                             
                             const dateStr = row.c[0]?.v || '';
                             const dayOfWeek = row.c[1]?.v || '';
@@ -125,119 +190,127 @@
                                 // 日付フォーマットが "5/1" のような形式を想定
                                 const parts = dateStr.split('/');
                                 if (parts.length === 2) {
-                                    const currentYear = new Date().getFullYear();
-                                    dateObj = new Date(currentYear, parseInt(parts[0]) - 1, parseInt(parts[1]));
+                                    const month = parseInt(parts[0]);
+                                    const day = parseInt(parts[1]);
+                                    dateObj = new Date(now.getFullYear(), month - 1, day);
                                 }
                             }
                             
-                            scheduleItems.push({
-                                date: dateObj || new Date(0), // 日付オブジェクト
-                                dateStr: dateStr,            // 元の日付文字列
-                                dayOfWeek: dayOfWeek,
-                                time: time,
-                                location: location,
-                                menu: menu,
-                                pace: pace,
-                                strengthening: strengthening,
-                                notes: notes
+                            if (dateObj) {
+                                scheduleItems.push({
+                                    date: dateObj,
+                                    dateStr: dateStr,
+                                    dayOfWeek: dayOfWeek,
+                                    time: time,
+                                    location: location,
+                                    menu: menu,
+                                    pace: pace,
+                                    strengthening: strengthening,
+                                    notes: notes
+                                });
+                            }
+                        }
+                        
+                        // 現在の日付の練習と将来の練習を分ける
+                        const todayStr = `${currentMonth}/${currentDate}`;
+                        const todayItems = scheduleItems.filter(item => item.dateStr === todayStr);
+                        
+                        // 今日より後の練習をソート
+                        const upcomingItems = scheduleItems.filter(item => {
+                            const itemDate = item.date;
+                            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                            return itemDate > today;
+                        }).sort((a, b) => a.date - b.date);
+                        
+                        // 今日の練習を表示
+                        if (todayItems.length > 0) {
+                            todaySchedule.innerHTML = '';
+                            todayItems.forEach((item, index) => {
+                                const card = createScheduleCard(item, index, 'today');
+                                todaySchedule.appendChild(card);
                             });
+                        } else {
+                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
                         }
                         
-                        // 現在の日付を取得
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        
-                        // 将来の練習と過去の練習に分ける
-                        const futurePractices = scheduleItems.filter(item => item.date >= today);
-                        const pastPractices = scheduleItems.filter(item => item.date < today);
-                        
-                        // 将来の練習は日付の昇順（近い日順）、過去の練習は日付の降順（最近の日順）
-                        futurePractices.sort((a, b) => a.date - b.date);
-                        pastPractices.sort((a, b) => b.date - a.date);
-                        
-                        // 将来の練習を先に、その後に過去の練習を表示
-                        const sortedScheduleItems = [...futurePractices, ...pastPractices];
-                        
-                        // 練習がない場合のメッセージ
-                        if (sortedScheduleItems.length === 0) {
-                            scheduleContainer.innerHTML = '<div class="text-center p-4 text-gray-500">練習の予定はありません。</div>';
-                            loading.style.display = 'none';
-                            return;
+                        // 将来の練習を表示
+                        if (upcomingItems.length > 0) {
+                            upcomingSchedule.innerHTML = '';
+                            
+                            // 最初の練習は次回練習として強調
+                            const nextPractice = upcomingItems.shift();
+                            const nextCard = createScheduleCard(nextPractice, 'next', 'next');
+                            upcomingSchedule.appendChild(nextCard);
+                            
+                            // 残りの練習を表示
+                            upcomingItems.forEach((item, index) => {
+                                const card = createScheduleCard(item, index + 1000, 'upcoming');
+                                upcomingSchedule.appendChild(card);
+                            });
+                        } else {
+                            upcomingSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今後の練習予定はありません</div>';
                         }
-                        
-                        // 画面に表示
-                        sortedScheduleItems.forEach((item, index) => {
-                            // 次回の練習かどうか判断
-                            const isNextPractice = index === 0 && item.date >= today;
-                            
-                            const card = document.createElement('div');
-                            card.className = `card bg-white border rounded ${isNextPractice ? 'next-practice' : ''}`;
-                            
-                            card.innerHTML = `
-                                <div class="cursor-pointer p-3" onclick="toggleDetails(${index})">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <div class="font-medium">${item.dateStr} (${item.dayOfWeek})</div>
-                                            <div class="text-sm text-gray-600">${item.time} @ ${item.location}</div>
-                                        </div>
-                                        <div>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" id="icon-${index}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="details-${index}" class="details border-t px-3 py-2 bg-gray-50">
-                                    <div class="space-y-3">
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-700">練習メニュー</div>
-                                            <div class="text-sm">${item.menu || '情報なし'}</div>
-                                        </div>
-                                        
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-700">ペース</div>
-                                            <div class="text-sm">${item.pace || '情報なし'}</div>
-                                        </div>
-                                        
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-700">補強</div>
-                                            <div class="text-sm">${item.strengthening || '情報なし'}</div>
-                                        </div>
-                                        
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-700">補足</div>
-                                            <div class="text-sm">${item.notes || '情報なし'}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                            scheduleContainer.appendChild(card);
-                        });
-                        
-                        loading.style.display = 'none';
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
-                        scheduleContainer.innerHTML = '<div class="text-red-500 text-center p-4">データの取得に失敗しました。再度お試しください。</div>';
-                        loading.style.display = 'none';
+                        todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        upcomingSchedule.innerHTML = '';
                     });
+            }
+            
+            // 練習カードを作成する関数
+            function createScheduleCard(item, index, type) {
+                const card = document.createElement('div');
+                card.className = `card bg-white rounded shadow-sm border ${type === 'today' ? 'today-card' : type === 'next' ? 'next-practice' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="cursor-pointer p-4" onclick="toggleDetails('${type}-${index}')">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-3">
+                                <span class="date-badge">${item.dateStr} (${item.dayOfWeek})</span>
+                                <span class="text-sm">${item.time}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="location-badge mr-2">${item.location}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 chevron" id="icon-${type}-${index}" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="details-${type}-${index}" class="details border-t p-4 bg-gray-50 rounded-b">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-1">練習メニュー</div>
+                                <div class="text-sm mb-3">${item.menu || '情報なし'}</div>
+                                
+                                <div class="text-sm font-medium text-gray-700 mb-1">ペース</div>
+                                <div class="text-sm">${item.pace || '情報なし'}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-1">補強</div>
+                                <div class="text-sm mb-3">${item.strengthening || '情報なし'}</div>
+                                
+                                <div class="text-sm font-medium text-gray-700 mb-1">補足</div>
+                                <div class="text-sm">${item.notes || '情報なし'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
             }
 
             // 初期データ読み込み
-            fetchAndDisplayData(currentSheet);
+            fetchAndDisplayData();
             
             // 詳細の表示/非表示を切り替える関数をグローバルスコープに追加
-            window.toggleDetails = function(index) {
-                const detailsElement = document.getElementById(`details-${index}`);
-                const iconElement = document.getElementById(`icon-${index}`);
+            window.toggleDetails = function(id) {
+                const detailsElement = document.getElementById(`details-${id}`);
+                const iconElement = document.getElementById(`icon-${id}`);
                 
                 detailsElement.classList.toggle('active');
-                
-                if (detailsElement.classList.contains('active')) {
-                    iconElement.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
-                } else {
-                    iconElement.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
-                }
+                iconElement.classList.toggle('up');
             };
         });
     </script>
