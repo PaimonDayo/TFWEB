@@ -19,6 +19,7 @@
         .card {
             transition: transform 0.2s, box-shadow 0.2s;
             border-radius: 8px;
+            margin-bottom: 12px;
         }
         
         .card:hover {
@@ -96,6 +97,34 @@
             height: 2px;
             background-color: #3b82f6;
         }
+        
+        .sheet-selector {
+            display: flex;
+            overflow-x: auto;
+            padding: 8px 0;
+            margin-bottom: 16px;
+            scrollbar-width: none;
+        }
+        
+        .sheet-selector::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .sheet-option {
+            padding: 6px 12px;
+            margin-right: 8px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .sheet-option.active {
+            background-color: #3b82f6;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -106,7 +135,9 @@
     </header>
 
     <main class="container mx-auto py-6 px-4">
-        <div id="currentDate" class="text-sm text-gray-500 mb-6"></div>
+        <div id="currentDate" class="text-sm text-gray-500 mb-4"></div>
+        
+        <div id="sheetSelector" class="sheet-selector"></div>
         
         <div id="todayContainer" class="mb-6">
             <h2 class="section-title">今日の練習</h2>
@@ -115,9 +146,9 @@
             </div>
         </div>
         
-        <div id="monthlyContainer">
-            <h2 class="section-title">今月の予定</h2>
-            <div id="monthlySchedule" class="space-y-2">
+        <div id="scheduleContainer">
+            <h2 class="section-title">練習予定</h2>
+            <div id="allSchedule">
                 <div class="loader"></div>
             </div>
         </div>
@@ -126,8 +157,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const todaySchedule = document.getElementById('todaySchedule');
-            const monthlySchedule = document.getElementById('monthlySchedule');
+            const allSchedule = document.getElementById('allSchedule');
             const currentDateElement = document.getElementById('currentDate');
+            const sheetSelector = document.getElementById('sheetSelector');
             
             // 現在の日時を取得
             const now = new Date();
@@ -138,20 +170,53 @@
             // 今日の日付を表示
             currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
             
-            // シート名を設定（例：5月メニュー）
-            const sheetName = `${currentMonth}月メニュー`;
+            // 利用可能なシート名の配列（初期値として現在の月と前後の月を含める）
+            const availableSheets = [
+                {id: `${currentMonth-1 > 0 ? currentMonth-1 : 12}月メニュー`, name: `${currentMonth-1 > 0 ? currentMonth-1 : 12}月`},
+                {id: `${currentMonth}月メニュー`, name: `${currentMonth}月`},
+                {id: `${currentMonth+1 <= 12 ? currentMonth+1 : 1}月メニュー`, name: `${currentMonth+1 <= 12 ? currentMonth+1 : 1}月`}
+            ];
+            
+            // 現在のシート名（デフォルトは現在の月）
+            let currentSheet = `${currentMonth}月メニュー`;
+            
+            // シートセレクタを生成
+            generateSheetSelector();
             
             // スプレッドシートのID
             const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
+
+            // シートセレクタを生成する関数
+            function generateSheetSelector() {
+                sheetSelector.innerHTML = '';
+                
+                availableSheets.forEach(sheet => {
+                    const option = document.createElement('div');
+                    option.className = `sheet-option ${sheet.id === currentSheet ? 'active' : ''}`;
+                    option.textContent = sheet.name;
+                    option.dataset.sheetId = sheet.id;
+                    
+                    option.addEventListener('click', function() {
+                        currentSheet = this.dataset.sheetId;
+                        document.querySelectorAll('.sheet-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        fetchAndDisplayData();
+                    });
+                    
+                    sheetSelector.appendChild(option);
+                });
+            }
 
             // データを取得して表示する関数
             function fetchAndDisplayData() {
                 // ローダーを表示
                 todaySchedule.innerHTML = '<div class="loader"></div>';
-                monthlySchedule.innerHTML = '<div class="loader"></div>';
+                allSchedule.innerHTML = '<div class="loader"></div>';
 
                 // Google Sheetsから公開データを取得するURLを構築
-                const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+                const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(currentSheet)}`;
 
                 fetch(url)
                     .then(response => response.text())
@@ -181,9 +246,6 @@
                                 const strengthening = row.c[6]?.v || '';
                                 const notes = row.c[7]?.v || '';
                                 
-                                // 時間または場所が空の場合はスキップ
-                                if (!time || !location) continue;
-                                
                                 // 日付文字列を解析して日付番号を取得
                                 const dateParts = dateStr.split('/');
                                 let day = 0;
@@ -204,15 +266,22 @@
                                 });
                             }
                             
-                            // 今日の練習をフィルタリング
-                            const todayStr = `${currentMonth}/${currentDate}`;
-                            const todayItems = scheduleItems.filter(item => item.dateStr === todayStr);
+                            // 選択中の月を取得
+                            const selectedMonth = parseInt(currentSheet.match(/(\d+)/)[0]);
                             
-                            // 今日以外の今月の練習（すべて表示）
-                            const monthlyItems = scheduleItems.filter(item => item.dateStr !== todayStr);
+                            // 今日の練習をフィルタリング（選択中の月が現在の月と同じ場合のみ）
+                            const todayItems = [];
+                            if (selectedMonth === currentMonth) {
+                                const todayStr = `${currentMonth}/${currentDate}`;
+                                scheduleItems.forEach(item => {
+                                    if (item.dateStr === todayStr) {
+                                        todayItems.push(item);
+                                    }
+                                });
+                            }
                             
                             // 日付順にソート
-                            monthlyItems.sort((a, b) => a.day - b.day);
+                            scheduleItems.sort((a, b) => a.day - b.day);
                             
                             // 今日の練習を表示
                             if (todayItems.length > 0) {
@@ -225,26 +294,29 @@
                                 todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
                             }
                             
-                            // 今月の練習を表示
-                            if (monthlyItems.length > 0) {
-                                monthlySchedule.innerHTML = '';
-                                monthlyItems.forEach((item, index) => {
-                                    const card = createScheduleCard(item, index, 'monthly');
-                                    monthlySchedule.appendChild(card);
+                            // すべての練習を表示
+                            if (scheduleItems.length > 0) {
+                                allSchedule.innerHTML = '';
+                                scheduleItems.forEach((item, index) => {
+                                    // 今日の練習と重複表示しないよう、今日でない練習のみ表示
+                                    if (selectedMonth !== currentMonth || item.dateStr !== `${currentMonth}/${currentDate}`) {
+                                        const card = createScheduleCard(item, index, 'all');
+                                        allSchedule.appendChild(card);
+                                    }
                                 });
                             } else {
-                                monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">練習予定はありません</div>';
+                                allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">練習予定はありません</div>';
                             }
                         } catch (error) {
                             console.error('データの処理中にエラーが発生しました:', error);
                             todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
-                            monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
+                            allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
                         }
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
                         todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
-                        monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
                     });
             }
             
