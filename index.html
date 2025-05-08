@@ -224,11 +224,38 @@
       <h2 id="schedule-title" class="section-title">練習予定</h2>
       <div id="schedule-list"></div>
     </div>
+    
+    <!-- デバッグ情報 (開発時のみ表示) -->
+    <div id="debug-panel" class="debug-panel" style="display: none;"></div>
   </main>
 
   <!-- スクリプト -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // デバッグモード
+      const DEBUG = false;
+      const debugPanel = document.getElementById('debug-panel');
+      if (DEBUG) {
+        debugPanel.style.display = 'block';
+      }
+      
+      // デバッグログ関数
+      function debugLog(message, data) {
+        if (!DEBUG) return;
+        console.log(message, data);
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const dataStr = data ? (typeof data === 'object' ? JSON.stringify(data, null, 2) : data) : '';
+        
+        const logEntry = document.createElement('div');
+        logEntry.innerHTML = `<div class="text-xs opacity-50">${timestamp}</div>` +
+                            `<div class="mb-2">${message}</div>` + 
+                            (dataStr ? `<pre class="text-xs bg-gray-100 p-1 rounded">${dataStr}</pre>` : '');
+        
+        debugPanel.appendChild(logEntry);
+        debugPanel.scrollTop = debugPanel.scrollHeight;
+      }
+      
       // DOM要素
       const currentDateEl = document.getElementById('current-date');
       const monthTabsEl = document.getElementById('month-tabs');
@@ -246,6 +273,9 @@
       
       // 選択中の月（デフォルトは現在の月）
       let selectedMonth = currentMonth;
+      
+      // CORS対応用のプロキシURL (必要に応じて)
+      // const CORS_PROXY = 'https://corsproxy.io/?';
       
       // アプリケーション初期化
       init();
@@ -324,6 +354,8 @@
           month < 10 ? `0${month}月メニュー` : null  // 0埋め（例: 01月メニュー）
         ].filter(Boolean); // nullを除外
         
+        debugLog('試行するシート名:', possibleSheetNames);
+        
         // 各シート名を順に試行
         tryFetchSheet(possibleSheetNames);
       }
@@ -337,10 +369,15 @@
         }
         
         const sheetName = sheetNames[index];
-        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        // export=csvを追加してCSV形式でデータを取得することで
+        // 正しく取得できる可能性が高まります
+        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+        
+        debugLog(`シート「${sheetName}」を取得中...`, url);
         
         // タイムアウト設定
         const timeoutId = setTimeout(() => {
+          debugLog('データ取得がタイムアウトしました');
           showMessage('error', 'データの取得がタイムアウトしました。インターネット接続を確認してください。');
         }, 10000);
         
@@ -348,116 +385,130 @@
         fetch(url)
           .then(response => {
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+            
+            // レスポンスステータスのチェック
+            debugLog('レスポンスステータス:', response.status);
+            if (!response.ok) {
+              throw new Error(`HTTP error ${response.status}`);
+            }
+            
             return response.text();
           })
           .then(text => {
-            // エラーチェック
-            if (text.includes('no such sheet') || text.includes('Invalid query parameter value')) {
+            debugLog('レスポンステキスト (一部):', text.substring(0, 200) + '...');
+            
+            // スプレッドシートが存在するか確認
+            if (text.includes('no such sheet') || 
+                text.includes('Invalid query parameter value') ||
+                text.includes('DOCTYPE html')) {
+              debugLog(`シート「${sheetName}」は存在しません`);
               // 次のシート名を試行
               return tryFetchSheet(sheetNames, index + 1);
             }
             
-            // JSON抽出
-            let jsonData;
-            try {
-              // パターン1: google.visualization.Query.setResponse(...)
-              const match = text.match(/setResponse\(([\s\S]+)\);?$/);
-              if (match) {
-                jsonData = JSON.parse(match[1]);
-              } else {
-                // パターン2: JSON部分を直接抽出
-                const jsonStart = text.indexOf('{');
-                const jsonEnd = text.lastIndexOf('}') + 1;
-                if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                  jsonData = JSON.parse(text.substring(jsonStart, jsonEnd));
-                } else {
-                  throw new Error('Invalid response format');
-                }
-              }
-            } catch (e) {
-              console.error('JSON解析エラー:', e);
-              showMessage('error', 'データの解析に失敗しました。');
-              return;
-            }
-            
-            // データチェック
-            if (jsonData.status === 'error' || !jsonData.table || !jsonData.table.rows) {
-              return tryFetchSheet(sheetNames, index + 1);
-            }
-            
-            // データ処理
-            processSheetData(jsonData.table.rows);
+            // CSVデータを解析
+            parseCSVData(text, sheetName);
           })
           .catch(error => {
             clearTimeout(timeoutId);
             console.error('Fetch error:', error);
-            showMessage('error', 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。');
+            debugLog('データ取得エラー:', error.message);
+            
+            // 次のシート名を試行するか、エラーメッセージを表示
+            if (index < sheetNames.length - 1) {
+              tryFetchSheet(sheetNames, index + 1);
+            } else {
+              showMessage('error', 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。');
+            }
           });
       }
       
-      // シートデータの処理
-      function processSheetData(rows) {
+      // CSVデータの解析
+      function parseCSVData(csvText, sheetName) {
+        debugLog('CSVデータを解析中...');
+        
         try {
+          // CSVを行に分割
+          const lines = csvText.split(/\r?\n/);
+          if (lines.length <= 1) {
+            debugLog('CSVデータが空です');
+            showMessage('info', '練習データがありません');
+            return;
+          }
+          
           // 練習データを抽出
           const scheduleItems = [];
           
-          // 最初の行はヘッダー行なのでスキップ
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
+          // 各行を処理（最初の行はヘッダー行なのでスキップ）
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue; // 空行はスキップ
+            
+            // カンマで分割（引用符内のカンマは無視）
+            const columns = parseCSVLine(line);
             
             // 必須項目チェック
-            if (!row.c || !row.c[0] || !row.c[0].v) continue;
-            if (!row.c[2] || !row.c[2].v || !row.c[3] || !row.c[3].v) continue; // 時間と場所は必須
+            if (columns.length < 4 || !columns[0] || !columns[2] || !columns[3]) continue;
             
-            // 日付の処理
-            const dateValue = row.c[0].v;
+            // 日付データの解析
+            const dateStr = columns[0].trim();
             let day = null;
             
-            // 日付形式の判定と変換
-            if (dateValue instanceof Date) {
-              // Dateオブジェクト
-              day = dateValue.getDate();
-            } else if (row.c[0].f) {
-              // フォーマット済み文字列（例: "6月1日(月)"）
-              const match = row.c[0].f.match(/(\d+)月\s*(\d+)日/);
-              if (match) day = parseInt(match[2], 10);
-            } else if (typeof dateValue === 'string') {
-              // 文字列（例: "5/1"）
-              const parts = dateValue.split('/');
-              if (parts.length === 2) day = parseInt(parts[1], 10);
-            } else if (typeof dateValue === 'number') {
-              // 数値（シリアル値）
-              const temp = new Date(1899, 11, 30);
-              temp.setDate(temp.getDate() + dateValue);
-              day = temp.getDate();
+            // 日付形式の判定
+            if (dateStr.includes('/')) {
+              // "5/1" 形式
+              const parts = dateStr.split('/');
+              if (parts.length === 2) {
+                day = parseInt(parts[1], 10);
+              }
+            } else if (dateStr.includes('月')) {
+              // "5月1日" 形式
+              const match = dateStr.match(/(\d+)月\s*(\d+)日/);
+              if (match) {
+                day = parseInt(match[2], 10);
+              }
+            } else {
+              // 数値のみ（日）と仮定
+              const dayNum = parseInt(dateStr, 10);
+              if (!isNaN(dayNum) && dayNum > 0 && dayNum <= 31) {
+                day = dayNum;
+              }
             }
             
             // 無効な日付はスキップ
-            if (!day || isNaN(day) || day < 1 || day > 31) continue;
+            if (!day || isNaN(day) || day < 1 || day > 31) {
+              debugLog(`無効な日付をスキップ: ${dateStr}`);
+              continue;
+            }
             
-            // 当月分の場合、過去の日付はスキップ
-            if (selectedMonth === currentMonth && day < currentDate) continue;
+            // 当月分は過去の日付はスキップ（オプション）
+            // if (selectedMonth === currentMonth && day < currentDate) continue;
+            
+            // 曜日の取得
+            const dayOfWeek = columns[1]?.trim() || '';
             
             // 練習データの追加
             scheduleItems.push({
               day: day,
               dateStr: `${selectedMonth}/${day}`,
-              dayOfWeek: row.c[1]?.f || row.c[1]?.v || '',
-              time: row.c[2]?.v || '',
-              location: row.c[3]?.v || '',
-              menu: row.c[4]?.v || '',
-              pace: row.c[5]?.v || '',
-              strengthening: row.c[6]?.v || '',
-              notes: row.c[7]?.v || ''
+              dayOfWeek: dayOfWeek,
+              time: columns[2]?.trim() || '',
+              location: columns[3]?.trim() || '',
+              menu: columns[4]?.trim() || '',
+              pace: columns[5]?.trim() || '',
+              strengthening: columns[6]?.trim() || '',
+              notes: columns[7]?.trim() || ''
             });
           }
           
           // データがない場合
           if (scheduleItems.length === 0) {
+            debugLog('有効な練習データがありません');
             showMessage('info', '練習予定はありません');
             return;
           }
+          
+          debugLog(`${scheduleItems.length}件の練習データを取得しました`);
           
           // 日付順ソート
           scheduleItems.sort((a, b) => a.day - b.day);
@@ -493,9 +544,36 @@
             scheduleListEl.innerHTML = '<div class="info-message">練習予定はありません</div>';
           }
         } catch (error) {
-          console.error('データ処理エラー:', error);
+          console.error('CSV解析エラー:', error);
+          debugLog('CSVデータの解析に失敗しました:', error.message);
           showMessage('error', 'データの処理中にエラーが発生しました。');
         }
+      }
+      
+      // CSV行の解析（引用符内のカンマを考慮）
+      function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        // 最後の列を追加
+        result.push(current);
+        
+        // 引用符を削除
+        return result.map(col => col.replace(/^"|"$/g, '').trim());
       }
       
       // 練習カードのレンダリング
