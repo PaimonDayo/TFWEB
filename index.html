@@ -8,49 +8,83 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f5f7fa;
-            color: #334155;
+            background-color: #f9fafb;
+            color: #1f2937;
         }
         
         .container {
-            max-width: 768px;
+            max-width: 800px;
         }
         
         .card {
-            transition: transform 0.2s, box-shadow 0.2s;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            border: 1px solid #e5e7eb;
+            background-color: white;
         }
         
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         
         .today-card {
-            background: linear-gradient(to right, #f0f9ff, #e0f2fe);
-            border-left: 3px solid #0ea5e9;
+            border-left: 4px solid #2563eb;
+            background-color: #f0f9ff;
         }
         
-        .details {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.2s ease;
-            opacity: 0;
+        .month-tabs {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem 0;
         }
         
-        .details.active {
-            max-height: 500px;
-            opacity: 1;
+        .month-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .month-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            margin-right: 0.5rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            white-space: nowrap;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            transition: all 0.2s ease;
+        }
+        
+        .month-tab:hover {
+            background-color: #d1d5db;
+        }
+        
+        .month-tab.active {
+            background-color: #2563eb;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
         }
         
         .loader {
-            width: 30px;
-            height: 30px;
-            border: 3px solid #e2e8f0;
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 0.25rem solid #e5e7eb;
             border-radius: 50%;
-            border-top-color: #3b82f6;
-            animation: spin 0.8s linear infinite;
+            border-top-color: #2563eb;
+            animation: spin 1s linear infinite;
             margin: 2rem auto;
         }
         
@@ -58,97 +92,87 @@
             to { transform: rotate(360deg); }
         }
         
+        .details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .details.active {
+            max-height: 500px;
+        }
+        
         .date-badge {
-            background-color: #f1f5f9;
-            border-radius: 6px;
+            background-color: #e5e7eb;
             padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
             font-weight: 500;
+            font-size: 0.875rem;
         }
         
         .location-badge {
-            color: #475569;
-            background-color: #f8fafc;
-            border-radius: 6px;
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .chevron {
-            transition: transform 0.3s ease;
-        }
-        
-        .chevron.up {
-            transform: rotate(-180deg);
-        }
-
-        .section-title {
-            position: relative;
-            margin-bottom: 1.5rem;
-            font-weight: 600;
-            color: #334155;
-        }
-
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -0.5rem;
-            left: 0;
-            width: 3rem;
-            height: 2px;
-            background-color: #3b82f6;
-        }
-        
-        .sheet-selector {
-            display: flex;
-            overflow-x: auto;
-            padding: 8px 0;
-            margin-bottom: 16px;
-            scrollbar-width: none;
-        }
-        
-        .sheet-selector::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .sheet-option {
-            padding: 6px 12px;
-            margin-right: 8px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-            white-space: nowrap;
-            background-color: #e5e7eb;
+            background-color: #f3f4f6;
             color: #4b5563;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
         }
         
-        .sheet-option.active {
-            background-color: #3b82f6;
-            color: white;
+        .detail-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        
+        .detail-content {
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        
+        .error-message {
+            padding: 1rem;
+            text-align: center;
+            background-color: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .empty-message {
+            padding: 1rem;
+            text-align: center;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #6b7280;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
         }
     </style>
 </head>
-<body>
-    <header class="bg-white border-b py-4 shadow-sm sticky top-0 z-10">
+<body class="min-h-screen">
+    <header class="bg-white shadow-sm py-4 sticky top-0 z-10">
         <div class="container mx-auto px-4">
-            <h1 class="text-xl font-bold text-gray-800">TUATTF 練習スケジュール</h1>
+            <h1 class="text-xl font-bold">TUATTF 練習スケジュール</h1>
         </div>
     </header>
 
-    <main class="container mx-auto py-6 px-4">
+    <main class="container mx-auto px-4 py-6">
         <div id="currentDate" class="text-sm text-gray-500 mb-4"></div>
         
-        <div id="sheetSelector" class="sheet-selector"></div>
+        <div id="monthTabs" class="month-tabs"></div>
         
-        <div id="todayContainer" class="mb-6">
+        <div id="todaySection" class="mb-8">
             <h2 class="section-title">今日の練習</h2>
-            <div id="todaySchedule" class="space-y-2">
+            <div id="todaySchedule">
                 <div class="loader"></div>
             </div>
         </div>
         
-        <div id="scheduleContainer">
+        <div id="scheduleSection">
             <h2 id="scheduleTitle" class="section-title">練習予定</h2>
-            <div id="allSchedule">
+            <div id="scheduleList">
                 <div class="loader"></div>
             </div>
         </div>
@@ -156,13 +180,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const todaySchedule = document.getElementById('todaySchedule');
-            const allSchedule = document.getElementById('allSchedule');
+            // DOM要素
             const currentDateElement = document.getElementById('currentDate');
-            const sheetSelector = document.getElementById('sheetSelector');
-            const scheduleTitle = document.getElementById('scheduleTitle');
+            const monthTabsElement = document.getElementById('monthTabs');
+            const todaySectionElement = document.getElementById('todaySection');
+            const todayScheduleElement = document.getElementById('todaySchedule');
+            const scheduleTitleElement = document.getElementById('scheduleTitle');
+            const scheduleListElement = document.getElementById('scheduleList');
             
-            // 現在の日時を取得
+            // 現在の日時
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
@@ -171,249 +197,339 @@
             // 今日の日付を表示
             currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
             
-            // 月の配列
-            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            // スプレッドシートID
+            const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
             
-            // 現在選択されている月（デフォルトは現在の月）
+            // 現在選択中の月
             let selectedMonth = currentMonth;
             
-            // シートセレクタを生成
-            generateSheetSelector();
+            // 月タブ初期化
+            initMonthTabs();
             
-            // スプレッドシートのID
-            const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
-
-            // シートセレクタを生成する関数
-            function generateSheetSelector() {
-                sheetSelector.innerHTML = '';
+            // 初期データ読み込み
+            loadMonthData();
+            
+            // 月タブの生成
+            function initMonthTabs() {
+                monthTabsElement.innerHTML = '';
                 
-                // すべての月を表示
-                months.forEach(month => {
-                    const option = document.createElement('div');
-                    option.className = `sheet-option ${month === selectedMonth ? 'active' : ''}`;
-                    option.textContent = `${month}月`;
-                    option.dataset.month = month;
+                // 12ヶ月分のタブを作成
+                for (let month = 1; month <= 12; month++) {
+                    const tab = document.createElement('div');
+                    tab.className = `month-tab ${month === selectedMonth ? 'active' : ''}`;
+                    tab.textContent = `${month}月`;
+                    tab.dataset.month = month;
                     
-                    option.addEventListener('click', function() {
+                    tab.addEventListener('click', function() {
                         selectedMonth = parseInt(this.dataset.month);
-                        document.querySelectorAll('.sheet-option').forEach(opt => {
-                            opt.classList.remove('active');
+                        
+                        // タブのアクティブ状態を更新
+                        document.querySelectorAll('.month-tab').forEach(tab => {
+                            tab.classList.remove('active');
                         });
                         this.classList.add('active');
                         
                         // タイトルを更新
-                        scheduleTitle.textContent = `${selectedMonth}月の練習予定`;
+                        scheduleTitleElement.textContent = `${selectedMonth}月の練習予定`;
                         
-                        // データを再取得
-                        fetchAndDisplayData();
+                        // データ再ロード
+                        loadMonthData();
                     });
                     
-                    sheetSelector.appendChild(option);
-                });
-                
-                // 選択されている月の要素までスクロール
-                const activeElement = document.querySelector('.sheet-option.active');
-                if (activeElement) {
-                    activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    monthTabsElement.appendChild(tab);
                 }
-            }
-
-            // データを取得して表示する関数
-            function fetchAndDisplayData() {
-                // ローダーを表示
-                todaySchedule.innerHTML = '<div class="loader"></div>';
-                allSchedule.innerHTML = '<div class="loader"></div>';
                 
-                // 現在選択されている月のシート名
-                const sheetName = `${selectedMonth}月メニュー`;
-
+                // 選択中のタブをスクロール位置の中央に
+                setTimeout(() => {
+                    const activeTab = monthTabsElement.querySelector('.month-tab.active');
+                    if (activeTab) {
+                        activeTab.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'nearest',
+                            inline: 'center'
+                        });
+                    }
+                }, 100);
+            }
+            
+            // 指定した月のデータを読み込む
+            function loadMonthData() {
+                // ローダーを表示
+                todayScheduleElement.innerHTML = '<div class="loader"></div>';
+                scheduleListElement.innerHTML = '<div class="loader"></div>';
+                
+                // 今日のセクションは現在の月を選択している場合のみ表示
+                todaySectionElement.style.display = selectedMonth === currentMonth ? 'block' : 'none';
+                
                 // タイトルを更新
-                scheduleTitle.textContent = `${selectedMonth}月の練習予定`;
-
-                // Google Sheetsから公開データを取得するURLを構築
+                scheduleTitleElement.textContent = `${selectedMonth}月の練習予定`;
+                
+                // シート名
+                const sheetName = `${selectedMonth}月メニュー`;
+                
+                // Google SheetsからJSONデータを取得するURL
                 const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-
+                
                 fetch(url)
-                    .then(response => response.text())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
                     .then(data => {
+                        // エラーチェック
+                        if (data.includes('Invalid query parameter value')) {
+                            showSheetNotFoundError();
+                            return;
+                        }
+                        
                         try {
                             // Googleの応答を解析可能なJSONに変換
                             const jsonData = JSON.parse(data.substring(47).slice(0, -2));
                             
-                            // 行データを取得
-                            const rows = jsonData.table.rows;
-                            
-                            // 有効な練習データを抽出
-                            const scheduleItems = [];
-                            
-                            for (let i = 1; i < rows.length; i++) {
-                                const row = rows[i];
-                                
-                                // 空の行または必須項目が空の行をスキップ
-                                if (!row.c || !row.c[0] || !row.c[0].v) continue;
-                                
-                                // 各セルからデータを抽出
-                                let dateStr = '';
-                                if (row.c[0]?.v) {
-                                    // Google Sheetsの日付オブジェクトか文字列かを判定
-                                    if (typeof row.c[0].v === 'string') {
-                                        dateStr = row.c[0].v;
-                                    } else if (row.c[0].f) {
-                                        // fプロパティ（フォーマット済み文字列）があればそれを使用
-                                        dateStr = row.c[0].f;
-                                    } else {
-                                        // Date型の場合はフォーマットを無視して月/日の形式に変換
-                                        dateStr = `${selectedMonth}/${row.c[0].v.getDate ? row.c[0].v.getDate() : '?'}`;
-                                    }
-                                }
-                                
-                                const dayOfWeek = row.c[1]?.v || '';
-                                const time = row.c[2]?.v || '';
-                                const location = row.c[3]?.v || '';
-                                const menu = row.c[4]?.v || '';
-                                const pace = row.c[5]?.v || '';
-                                const strengthening = row.c[6]?.v || '';
-                                const notes = row.c[7]?.v || '';
-                                
-                                // 時間または場所が空の場合はスキップ
-                                if (!time || !location) continue;
-                                
-                                // 日付文字列から日を抽出
-                                let day = 0;
-                                const dateParts = dateStr.split('/');
-                                if (dateParts.length === 2) {
-                                    day = parseInt(dateParts[1]);
-                                }
-                                
-                                // 無効な日付はスキップ
-                                if (isNaN(day)) continue;
-                                
-                                scheduleItems.push({
-                                    day: day,
-                                    dateStr: dateStr,
-                                    dayOfWeek: dayOfWeek,
-                                    time: time,
-                                    location: location,
-                                    menu: menu,
-                                    pace: pace,
-                                    strengthening: strengthening,
-                                    notes: notes
-                                });
+                            // シートが存在しない/不正な場合
+                            if (jsonData.status === 'error' || !jsonData.table || !jsonData.table.rows) {
+                                showSheetNotFoundError();
+                                return;
                             }
                             
-                            // 今日の練習をフィルタリング（選択中の月が現在の月と同じ場合のみ）
-                            const todayItems = [];
-                            if (selectedMonth === currentMonth) {
-                                const todayStr = `${currentMonth}/${currentDate}`;
-                                scheduleItems.forEach(item => {
-                                    if (item.dateStr === todayStr) {
-                                        todayItems.push(item);
-                                    }
-                                });
+                            // データが空の場合
+                            if (jsonData.table.rows.length <= 1) {
+                                showEmptyDataMessage();
+                                return;
                             }
                             
-                            // 今日のコンテナの表示/非表示
-                            document.getElementById('todayContainer').style.display = 
-                                selectedMonth === currentMonth ? 'block' : 'none';
+                            // 行データを取得し、練習データを抽出
+                            processSheetData(jsonData.table.rows);
                             
-                            // 日付順にソート
-                            scheduleItems.sort((a, b) => a.day - b.day);
-                            
-                            // 今日の練習を表示
-                            if (todayItems.length > 0) {
-                                todaySchedule.innerHTML = '';
-                                todayItems.forEach((item, index) => {
-                                    const card = createScheduleCard(item, index, 'today');
-                                    todaySchedule.appendChild(card);
-                                });
-                            } else if (selectedMonth === currentMonth) {
-                                todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
-                            }
-                            
-                            // すべての練習を表示
-                            if (scheduleItems.length > 0) {
-                                allSchedule.innerHTML = '';
-                                scheduleItems.forEach((item, index) => {
-                                    // 今日の練習と重複表示しないよう、今日でない練習のみ表示
-                                    if (selectedMonth !== currentMonth || item.dateStr !== `${currentMonth}/${currentDate}`) {
-                                        const card = createScheduleCard(item, index, 'all');
-                                        allSchedule.appendChild(card);
-                                    }
-                                });
-                            } else {
-                                allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">練習予定はありません</div>';
-                            }
                         } catch (error) {
                             console.error('データの処理中にエラーが発生しました:', error);
-                            if (selectedMonth === currentMonth) {
-                                todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
-                            }
-                            allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
+                            showProcessingError();
                         }
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
-                        if (selectedMonth === currentMonth) {
-                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        if (error.message.includes('404')) {
+                            showSheetNotFoundError();
+                        } else {
+                            showFetchError();
                         }
-                        allSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
                     });
             }
             
-            // 練習カードを作成する関数
-            function createScheduleCard(item, index, type) {
-                const card = document.createElement('div');
-                card.className = `card bg-white rounded shadow-sm border ${type === 'today' ? 'today-card' : ''}`;
+            // シートデータの処理
+            function processSheetData(rows) {
+                // 練習データを抽出
+                const scheduleItems = [];
                 
-                card.innerHTML = `
-                    <div class="cursor-pointer p-4" onclick="toggleDetails('${type}-${index}')">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center space-x-3">
-                                <span class="date-badge">${item.dateStr} (${item.dayOfWeek})</span>
-                                <span class="text-sm">${item.time}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="location-badge mr-2">${item.location}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 chevron" id="icon-${type}-${index}" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="details-${type}-${index}" class="details border-t p-4 bg-gray-50 rounded-b">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <div class="text-sm font-medium text-gray-700 mb-1">練習メニュー</div>
-                                <div class="text-sm mb-3">${item.menu || '情報なし'}</div>
-                                
-                                <div class="text-sm font-medium text-gray-700 mb-1">ペース</div>
-                                <div class="text-sm">${item.pace || '情報なし'}</div>
-                            </div>
-                            <div>
-                                <div class="text-sm font-medium text-gray-700 mb-1">補強</div>
-                                <div class="text-sm mb-3">${item.strengthening || '情報なし'}</div>
-                                
-                                <div class="text-sm font-medium text-gray-700 mb-1">補足</div>
-                                <div class="text-sm">${item.notes || '情報なし'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    
+                    // 空の行または必須項目が空の行をスキップ
+                    if (!row.c || !row.c[0] || !row.c[0].v) continue;
+                    
+                    // 各セルからデータを抽出
+                    const dateValue = row.c[0]?.v;
+                    let dateStr = '';
+                    
+                    // 日付データの処理（文字列か日付オブジェクトか）
+                    if (typeof dateValue === 'string') {
+                        dateStr = dateValue;
+                    } else if (row.c[0].f) {
+                        // フォーマット済み文字列があればそれを使用
+                        dateStr = row.c[0].f;
+                    } else if (dateValue && typeof dateValue === 'object') {
+                        // 日付オブジェクトの場合
+                        try {
+                            const day = dateValue.getDate ? dateValue.getDate() : 1;
+                            dateStr = `${selectedMonth}/${day}`;
+                        } catch (e) {
+                            console.warn('日付の変換に失敗:', dateValue);
+                            dateStr = `${selectedMonth}/?`;
+                        }
+                    }
+                    
+                    const dayOfWeek = row.c[1]?.v || '';
+                    const time = row.c[2]?.v || '';
+                    const location = row.c[3]?.v || '';
+                    const menu = row.c[4]?.v || '';
+                    const pace = row.c[5]?.v || '';
+                    const strengthening = row.c[6]?.v || '';
+                    const notes = row.c[7]?.v || '';
+                    
+                    // 時間または場所が空の場合はスキップ
+                    if (!time || !location) continue;
+                    
+                    // 日付文字列から日を抽出
+                    let day = 0;
+                    const dateParts = dateStr.split('/');
+                    if (dateParts.length === 2) {
+                        day = parseInt(dateParts[1]);
+                    }
+                    
+                    // 無効な日付はスキップ
+                    if (isNaN(day)) continue;
+                    
+                    scheduleItems.push({
+                        day: day,
+                        dateStr: dateStr,
+                        dayOfWeek: dayOfWeek,
+                        time: time,
+                        location: location,
+                        menu: menu,
+                        pace: pace,
+                        strengthening: strengthening,
+                        notes: notes
+                    });
+                }
                 
-                return card;
+                // データがない場合
+                if (scheduleItems.length === 0) {
+                    showEmptyDataMessage();
+                    return;
+                }
+                
+                // 日付順にソート
+                scheduleItems.sort((a, b) => a.day - b.day);
+                
+                // 今日の練習と他の練習に分ける
+                const todayItems = [];
+                const otherItems = [];
+                
+                if (selectedMonth === currentMonth) {
+                    const todayStr = `${currentMonth}/${currentDate}`;
+                    
+                    scheduleItems.forEach(item => {
+                        if (item.dateStr === todayStr) {
+                            todayItems.push(item);
+                        } else {
+                            otherItems.push(item);
+                        }
+                    });
+                } else {
+                    // 現在の月以外は全て「他の練習」に
+                    otherItems.push(...scheduleItems);
+                }
+                
+                // 今日の練習を表示（現在の月を見ている場合のみ）
+                if (selectedMonth === currentMonth) {
+                    if (todayItems.length > 0) {
+                        displayScheduleItems(todayItems, todayScheduleElement, true);
+                    } else {
+                        todayScheduleElement.innerHTML = '<div class="empty-message">今日の練習予定はありません</div>';
+                    }
+                }
+                
+                // 他の練習を表示
+                if (otherItems.length > 0) {
+                    displayScheduleItems(otherItems, scheduleListElement, false);
+                } else {
+                    scheduleListElement.innerHTML = '<div class="empty-message">練習予定はありません</div>';
+                }
             }
-
-            // 詳細の表示/非表示を切り替える関数
+            
+            // 練習データの表示
+            function displayScheduleItems(items, container, isToday) {
+                container.innerHTML = '';
+                
+                items.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = `card ${isToday ? 'today-card' : ''}`;
+                    
+                    const cardId = `${isToday ? 'today' : 'schedule'}-${index}`;
+                    
+                    card.innerHTML = `
+                        <div class="p-4 cursor-pointer" onclick="toggleDetails('${cardId}')">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-4">
+                                    <span class="date-badge">${item.dateStr} (${item.dayOfWeek})</span>
+                                    <span class="text-sm">${item.time}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="location-badge mr-2">${item.location}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" id="icon-${cardId}" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="details-${cardId}" class="details border-t">
+                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50">
+                                <div>
+                                    <div class="detail-label">練習メニュー</div>
+                                    <div class="detail-content">${item.menu || '情報なし'}</div>
+                                    
+                                    <div class="detail-label">ペース</div>
+                                    <div class="detail-content">${item.pace || '情報なし'}</div>
+                                </div>
+                                <div>
+                                    <div class="detail-label">補強</div>
+                                    <div class="detail-content">${item.strengthening || '情報なし'}</div>
+                                    
+                                    <div class="detail-label">補足</div>
+                                    <div class="detail-content">${item.notes || '情報なし'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            }
+            
+            // エラーメッセージの表示
+            function showSheetNotFoundError() {
+                const errorMessage = `「${selectedMonth}月メニュー」というシートが見つかりませんでした。シート名を確認してください。`;
+                
+                if (selectedMonth === currentMonth) {
+                    todayScheduleElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+                }
+                
+                scheduleListElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+            }
+            
+            function showEmptyDataMessage() {
+                if (selectedMonth === currentMonth) {
+                    todayScheduleElement.innerHTML = '<div class="empty-message">練習データがありません</div>';
+                }
+                
+                scheduleListElement.innerHTML = '<div class="empty-message">練習データがありません</div>';
+            }
+            
+            function showProcessingError() {
+                const errorMessage = 'データの処理中にエラーが発生しました。データ形式を確認してください。';
+                
+                if (selectedMonth === currentMonth) {
+                    todayScheduleElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+                }
+                
+                scheduleListElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+            }
+            
+            function showFetchError() {
+                const errorMessage = 'データの取得に失敗しました。ネットワーク接続とスプレッドシートの共有設定を確認してください。';
+                
+                if (selectedMonth === currentMonth) {
+                    todayScheduleElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+                }
+                
+                scheduleListElement.innerHTML = `<div class="error-message">${errorMessage}</div>`;
+            }
+            
+            // 詳細の切り替え関数をグローバルスコープに追加
             window.toggleDetails = function(id) {
                 const detailsElement = document.getElementById(`details-${id}`);
                 const iconElement = document.getElementById(`icon-${id}`);
                 
-                detailsElement.classList.toggle('active');
-                iconElement.classList.toggle('up');
+                if (detailsElement.classList.contains('active')) {
+                    detailsElement.classList.remove('active');
+                    iconElement.innerHTML = '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />';
+                } else {
+                    detailsElement.classList.add('active');
+                    iconElement.innerHTML = '<path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />';
+                }
             };
-
-            // 初期データ読み込み
-            fetchAndDisplayData();
         });
     </script>
 </body>
