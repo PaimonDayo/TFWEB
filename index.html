@@ -31,11 +31,6 @@
             border-left: 3px solid #0ea5e9;
         }
         
-        .next-practice {
-            background: linear-gradient(to right, #f0fdf4, #dcfce7);
-            border-left: 3px solid #22c55e;
-        }
-        
         .details {
             max-height: 0;
             overflow: hidden;
@@ -120,9 +115,9 @@
             </div>
         </div>
         
-        <div id="upcomingContainer">
-            <h2 class="section-title">今後の練習</h2>
-            <div id="upcomingSchedule" class="space-y-2">
+        <div id="monthlyContainer">
+            <h2 class="section-title">今月の予定</h2>
+            <div id="monthlySchedule" class="space-y-2">
                 <div class="loader"></div>
             </div>
         </div>
@@ -131,7 +126,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const todaySchedule = document.getElementById('todaySchedule');
-            const upcomingSchedule = document.getElementById('upcomingSchedule');
+            const monthlySchedule = document.getElementById('monthlySchedule');
             const currentDateElement = document.getElementById('currentDate');
             
             // 現在の日時を取得
@@ -143,7 +138,7 @@
             // 今日の日付を表示
             currentDateElement.textContent = `${currentYear}年${currentMonth}月${currentDate}日`;
             
-            // 当月のシート名を設定（例：5月メニュー）
+            // シート名を設定（例：5月メニュー）
             const sheetName = `${currentMonth}月メニュー`;
             
             // スプレッドシートのID
@@ -153,7 +148,7 @@
             function fetchAndDisplayData() {
                 // ローダーを表示
                 todaySchedule.innerHTML = '<div class="loader"></div>';
-                upcomingSchedule.innerHTML = '<div class="loader"></div>';
+                monthlySchedule.innerHTML = '<div class="loader"></div>';
 
                 // Google Sheetsから公開データを取得するURLを構築
                 const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -189,18 +184,14 @@
                                 // 時間または場所が空の場合はスキップ
                                 if (!time || !location) continue;
                                 
-                                // 日付文字列を数値に変換して保存（例: "5/10" -> month=5, day=10）
+                                // 日付文字列を解析して日付番号を取得
                                 const dateParts = dateStr.split('/');
-                                if (dateParts.length !== 2) continue;
-                                
-                                const month = parseInt(dateParts[0]);
-                                const day = parseInt(dateParts[1]);
-                                
-                                // 無効な日付はスキップ
-                                if (isNaN(month) || isNaN(day)) continue;
+                                let day = 0;
+                                if (dateParts.length === 2) {
+                                    day = parseInt(dateParts[1]);
+                                }
                                 
                                 scheduleItems.push({
-                                    month: month,
                                     day: day,
                                     dateStr: dateStr,
                                     dayOfWeek: dayOfWeek,
@@ -213,90 +204,54 @@
                                 });
                             }
                             
-                            // 今日の日付の月と日を取得
-                            const todayMonth = currentMonth;
-                            const todayDay = currentDate;
-                            
                             // 今日の練習をフィルタリング
-                            const todayItems = scheduleItems.filter(item => 
-                                item.month === todayMonth && item.day === todayDay
-                            );
+                            const todayStr = `${currentMonth}/${currentDate}`;
+                            const todayItems = scheduleItems.filter(item => item.dateStr === todayStr);
                             
-                            // 今後の練習（今日より後の日付）をフィルタリング
-                            const upcomingItems = scheduleItems.filter(item => {
-                                // 同じ月で日付が大きい場合
-                                if (item.month === todayMonth && item.day > todayDay) {
-                                    return true;
-                                }
-                                // 月が大きい場合
-                                if (item.month > todayMonth) {
-                                    return true;
-                                }
-                                return false;
-                            });
+                            // 今日以外の今月の練習（すべて表示）
+                            const monthlyItems = scheduleItems.filter(item => item.dateStr !== todayStr);
                             
-                            // 日付順にソート（近い日順）
-                            upcomingItems.sort((a, b) => {
-                                if (a.month !== b.month) {
-                                    return a.month - b.month;
-                                }
-                                return a.day - b.day;
-                            });
+                            // 日付順にソート
+                            monthlyItems.sort((a, b) => a.day - b.day);
                             
                             // 今日の練習を表示
-                            displaySchedule(todayItems, todaySchedule, 'today', '今日の練習予定はありません');
-                            
-                            // 今後の練習を表示
-                            if (upcomingItems.length > 0) {
-                                upcomingSchedule.innerHTML = '';
-                                
-                                // 最初の練習は次回練習として強調
-                                const nextCard = createScheduleCard(upcomingItems[0], 'next', 'next');
-                                upcomingSchedule.appendChild(nextCard);
-                                
-                                // 残りの練習を表示
-                                for (let i = 1; i < upcomingItems.length; i++) {
-                                    const card = createScheduleCard(upcomingItems[i], i, 'upcoming');
-                                    upcomingSchedule.appendChild(card);
-                                }
+                            if (todayItems.length > 0) {
+                                todaySchedule.innerHTML = '';
+                                todayItems.forEach((item, index) => {
+                                    const card = createScheduleCard(item, index, 'today');
+                                    todaySchedule.appendChild(card);
+                                });
                             } else {
-                                upcomingSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今後の練習予定はありません</div>';
+                                todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
+                            }
+                            
+                            // 今月の練習を表示
+                            if (monthlyItems.length > 0) {
+                                monthlySchedule.innerHTML = '';
+                                monthlyItems.forEach((item, index) => {
+                                    const card = createScheduleCard(item, index, 'monthly');
+                                    monthlySchedule.appendChild(card);
+                                });
+                            } else {
+                                monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">練習予定はありません</div>';
                             }
                         } catch (error) {
                             console.error('データの処理中にエラーが発生しました:', error);
-                            showError(todaySchedule);
-                            showError(upcomingSchedule);
+                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
+                            monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの処理に失敗しました</div>';
                         }
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
-                        showError(todaySchedule);
-                        showError(upcomingSchedule);
+                        todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
+                        monthlySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
                     });
-            }
-            
-            // 練習スケジュールを表示する関数
-            function displaySchedule(items, container, type, emptyMessage) {
-                if (items.length > 0) {
-                    container.innerHTML = '';
-                    items.forEach((item, index) => {
-                        const card = createScheduleCard(item, index, type);
-                        container.appendChild(card);
-                    });
-                } else {
-                    container.innerHTML = `<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">${emptyMessage}</div>`;
-                }
-            }
-            
-            // エラーメッセージを表示する関数
-            function showError(container) {
-                container.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
             }
             
             // 練習カードを作成する関数
             function createScheduleCard(item, index, type) {
                 const card = document.createElement('div');
-                card.className = `card bg-white rounded shadow-sm border ${type === 'today' ? 'today-card' : type === 'next' ? 'next-practice' : ''}`;
+                card.className = `card bg-white rounded shadow-sm border ${type === 'today' ? 'today-card' : ''}`;
                 
                 card.innerHTML = `
                     <div class="cursor-pointer p-4" onclick="toggleDetails('${type}-${index}')">
