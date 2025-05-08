@@ -5,227 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TUATTF 練習スケジュール</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #ff6b35;
-            --secondary-color: #f7c59f;
-            --accent-color: #004e89;
-            --background-color: #efefef;
-            --text-color: #2b2d42;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
         }
-        
-        .header-bg {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
         .card {
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            transition: box-shadow 0.2s ease;
         }
-        
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        
-        .card-header {
-            border-radius: 12px 12px 0 0;
-        }
-        
         .details {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.5s ease, opacity 0.3s ease;
-            opacity: 0;
+            transition: max-height 0.3s ease;
         }
-        
         .details.active {
             max-height: 500px;
-            opacity: 1;
         }
-        
         .next-practice {
-            position: relative;
-            border: 2px solid var(--accent-color);
-            animation: pulse 2s infinite;
+            border-left: 4px solid #3b82f6;
         }
-        
-        .next-practice::before {
-            content: "次回練習";
-            position: absolute;
-            top: -10px;
-            left: 10px;
-            background-color: var(--accent-color);
-            color: white;
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            z-index: 10;
-        }
-        
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(0, 78, 137, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(0, 78, 137, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 78, 137, 0);
-            }
-        }
-        
         .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .date-badge {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 8px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        
-        .day-of-week {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        
-        .menu-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            margin-right: 8px;
-            color: white;
-        }
-        
-        .icon-run { background-color: #4CAF50; }
-        .icon-pace { background-color: #9C27B0; }
-        .icon-strength { background-color: #F44336; }
-        .icon-info { background-color: #2196F3; }
-        
-        .tab-selector {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        
-        .tab-selector::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .tab-option {
-            padding: 8px 16px;
-            cursor: pointer;
-            border-radius: 8px;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-        }
-        
-        .tab-option.active {
-            background-color: var(--accent-color);
-            color: white;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
-    <header class="header-bg text-white p-6 shadow-lg">
+    <header class="bg-white border-b p-4">
         <div class="container mx-auto">
-            <h1 class="text-3xl font-bold tracking-wide">TUATTF 練習スケジュール</h1>
-            <p class="mt-2 opacity-90">農工大トライアスロン同好会</p>
+            <h1 class="text-xl font-bold text-gray-800">TUATTF 練習スケジュール</h1>
         </div>
     </header>
 
-    <main class="container mx-auto py-8 px-4">
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex flex-wrap justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800 flex items-center">
-                    <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>練習メニュー
-                </h2>
-                <div id="currentDate" class="text-sm text-gray-600 font-medium bg-gray-100 rounded-full px-4 py-2 mt-2 sm:mt-0">
-                    <i class="far fa-calendar mr-2"></i>Loading...
-                </div>
-            </div>
-            
-            <div class="tab-selector mb-6">
-                <div id="sheetTab" class="tab-option active" data-sheet="n月メニュー">n月メニュー</div>
-                <!-- 追加のタブはここに追加されます -->
+    <main class="container mx-auto py-6 px-4">
+        <div class="bg-white rounded shadow-sm p-4 mb-4">
+            <div class="flex flex-wrap justify-between items-center mb-4">
+                <div id="currentDate" class="text-sm text-gray-600"></div>
+                <select id="sheetSelector" class="text-sm border rounded p-1">
+                    <option value="n月メニュー" selected>n月メニュー</option>
+                </select>
             </div>
             
             <div id="loading" class="loader"></div>
-            <div id="scheduleContainer" class="grid grid-cols-1 gap-6"></div>
+            <div id="scheduleContainer" class="space-y-4"></div>
         </div>
     </main>
-
-    <footer class="bg-gray-800 text-white p-6 mt-8">
-        <div class="container mx-auto">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="mb-4 md:mb-0">
-                    <h3 class="text-xl font-bold mb-2">TUATTF</h3>
-                    <p class="text-gray-300">東京農工大学トライアスロン同好会</p>
-                </div>
-                <div class="text-center md:text-right">
-                    <p>&copy; 2025 TUATTF All Rights Reserved</p>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const scheduleContainer = document.getElementById('scheduleContainer');
+            const sheetSelector = document.getElementById('sheetSelector');
             const loading = document.getElementById('loading');
             const currentDateElement = document.getElementById('currentDate');
             
             // 現在の日付を表示
             const now = new Date();
-            currentDateElement.innerHTML = `<i class="far fa-calendar mr-2"></i>${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+            currentDateElement.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
             
             // スプレッドシートのIDを設定
             const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
             let currentSheet = 'n月メニュー';
 
-            // タブ選択の処理
-            document.querySelectorAll('.tab-option').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.tab-option').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    currentSheet = this.dataset.sheet;
-                    fetchAndDisplayData(currentSheet);
-                });
+            // シート選択が変更されたとき
+            sheetSelector.addEventListener('change', function() {
+                currentSheet = this.value;
+                fetchAndDisplayData(currentSheet);
             });
 
             // データを取得して表示する関数
@@ -304,72 +160,53 @@
                         
                         // 練習がない場合のメッセージ
                         if (sortedScheduleItems.length === 0) {
-                            scheduleContainer.innerHTML = '<div class="text-center p-8 bg-gray-100 rounded-lg"><p class="text-gray-600">練習の予定はありません。</p></div>';
+                            scheduleContainer.innerHTML = '<div class="text-center p-4 text-gray-500">練習の予定はありません。</div>';
                             loading.style.display = 'none';
                             return;
                         }
                         
                         // 画面に表示
                         sortedScheduleItems.forEach((item, index) => {
+                            // 次回の練習かどうか判断
                             const isNextPractice = index === 0 && item.date >= today;
                             
                             const card = document.createElement('div');
-                            card.className = `card bg-white rounded-lg overflow-hidden ${isNextPractice ? 'next-practice' : ''}`;
-                            
-                            // 日付フォーマットの整形
-                            const dateFormatted = item.dateStr;
+                            card.className = `card bg-white border rounded ${isNextPractice ? 'next-practice' : ''}`;
                             
                             card.innerHTML = `
-                                <div class="cursor-pointer" onclick="toggleDetails(${index})">
-                                    <div class="flex flex-wrap md:flex-nowrap p-4">
-                                        <div class="date-badge w-20 h-20 flex flex-col justify-center mr-4 flex-shrink-0">
-                                            <div class="text-xl font-bold">${dateFormatted}</div>
-                                            <div class="day-of-week">${item.dayOfWeek}</div>
+                                <div class="cursor-pointer p-3" onclick="toggleDetails(${index})">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <div class="font-medium">${item.dateStr} (${item.dayOfWeek})</div>
+                                            <div class="text-sm text-gray-600">${item.time} @ ${item.location}</div>
                                         </div>
-                                        <div class="flex-grow">
-                                            <div class="flex flex-wrap items-center mb-2">
-                                                <div class="mr-4 mb-2 md:mb-0">
-                                                    <p class="text-gray-600 flex items-center">
-                                                        <i class="far fa-clock mr-1"></i> ${item.time}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p class="text-gray-800 font-medium flex items-center">
-                                                        <i class="fas fa-map-marker-alt mr-1 text-red-500"></i> ${item.location}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="mt-2 text-right">
-                                                <span class="text-accent-color hover:text-blue-800 flex items-center justify-end">
-                                                    詳細を表示 <i class="fas fa-chevron-down ml-1" id="icon-${index}"></i>
-                                                </span>
-                                            </div>
+                                        <div>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" id="icon-${index}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
                                     </div>
                                 </div>
-                                <div id="details-${index}" class="details p-4 bg-gray-50 border-t border-gray-200">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div id="details-${index}" class="details border-t px-3 py-2 bg-gray-50">
+                                    <div class="space-y-3">
                                         <div>
-                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
-                                                <span class="menu-icon icon-run"><i class="fas fa-running"></i></span>練習メニュー
-                                            </h3>
-                                            <p class="text-gray-800 mb-4 pl-9">${item.menu || '情報なし'}</p>
-                                            
-                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
-                                                <span class="menu-icon icon-pace"><i class="fas fa-tachometer-alt"></i></span>ペース
-                                            </h3>
-                                            <p class="text-gray-800 pl-9">${item.pace || '情報なし'}</p>
+                                            <div class="text-sm font-medium text-gray-700">練習メニュー</div>
+                                            <div class="text-sm">${item.menu || '情報なし'}</div>
                                         </div>
+                                        
                                         <div>
-                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
-                                                <span class="menu-icon icon-strength"><i class="fas fa-dumbbell"></i></span>補強
-                                            </h3>
-                                            <p class="text-gray-800 mb-4 pl-9">${item.strengthening || '情報なし'}</p>
-                                            
-                                            <h3 class="font-semibold text-gray-700 mb-2 flex items-center">
-                                                <span class="menu-icon icon-info"><i class="fas fa-info-circle"></i></span>補足
-                                            </h3>
-                                            <p class="text-gray-800 pl-9">${item.notes || '情報なし'}</p>
+                                            <div class="text-sm font-medium text-gray-700">ペース</div>
+                                            <div class="text-sm">${item.pace || '情報なし'}</div>
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-700">補強</div>
+                                            <div class="text-sm">${item.strengthening || '情報なし'}</div>
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-700">補足</div>
+                                            <div class="text-sm">${item.notes || '情報なし'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -397,11 +234,9 @@
                 detailsElement.classList.toggle('active');
                 
                 if (detailsElement.classList.contains('active')) {
-                    iconElement.classList.remove('fa-chevron-down');
-                    iconElement.classList.add('fa-chevron-up');
+                    iconElement.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
                 } else {
-                    iconElement.classList.remove('fa-chevron-up');
-                    iconElement.classList.add('fa-chevron-down');
+                    iconElement.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
                 }
             };
         });
