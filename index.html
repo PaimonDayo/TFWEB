@@ -23,7 +23,7 @@
         
         .card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         .today-card {
@@ -160,102 +160,130 @@
                 fetch(url)
                     .then(response => response.text())
                     .then(data => {
-                        // Googleの応答を解析可能なJSONに変換
-                        const jsonData = JSON.parse(data.substring(47).slice(0, -2));
-                        
-                        // 行データを取得
-                        const rows = jsonData.table.rows;
-                        
-                        // ヘッダー行をスキップし、データ行のみを処理
-                        const scheduleItems = [];
-                        
-                        for (let i = 1; i < rows.length; i++) {
-                            const row = rows[i];
+                        try {
+                            // Googleの応答を解析可能なJSONに変換
+                            const jsonData = JSON.parse(data.substring(47).slice(0, -2));
                             
-                            // 空の行または必須項目が空の行をスキップ
-                            if (!row.c[0] || !row.c[0].v || !row.c[2] || !row.c[3]) continue;
+                            // 行データを取得
+                            const rows = jsonData.table.rows;
                             
-                            const dateStr = row.c[0]?.v || '';
-                            const dayOfWeek = row.c[1]?.v || '';
-                            const time = row.c[2]?.v || '';
-                            const location = row.c[3]?.v || '';
-                            const menu = row.c[4]?.v || '';
-                            const pace = row.c[5]?.v || '';
-                            const strengthening = row.c[6]?.v || '';
-                            const notes = row.c[7]?.v || '';
+                            // 有効な練習データを抽出
+                            const scheduleItems = [];
                             
-                            // 日付を解析してDateオブジェクトに変換
-                            let dateObj;
-                            if (dateStr) {
-                                // 日付フォーマットが "5/1" のような形式を想定
-                                const parts = dateStr.split('/');
-                                if (parts.length === 2) {
-                                    const month = parseInt(parts[0]);
-                                    const day = parseInt(parts[1]);
-                                    dateObj = new Date(now.getFullYear(), month - 1, day);
+                            for (let i = 1; i < rows.length; i++) {
+                                const row = rows[i];
+                                
+                                // 空の行または必須項目が空の行をスキップ
+                                if (!row.c || !row.c[0] || !row.c[0].v) continue;
+                                
+                                const dateStr = row.c[0]?.v || '';
+                                const dayOfWeek = row.c[1]?.v || '';
+                                const time = row.c[2]?.v || '';
+                                const location = row.c[3]?.v || '';
+                                const menu = row.c[4]?.v || '';
+                                const pace = row.c[5]?.v || '';
+                                const strengthening = row.c[6]?.v || '';
+                                const notes = row.c[7]?.v || '';
+                                
+                                // 時間または場所が空の場合はスキップ
+                                if (!time || !location) continue;
+                                
+                                // 日付を解析してDateオブジェクトに変換
+                                let dateObj = null;
+                                if (dateStr) {
+                                    // 日付フォーマットが "5/1" のような形式を想定
+                                    const parts = dateStr.split('/');
+                                    if (parts.length === 2) {
+                                        const month = parseInt(parts[0]);
+                                        const day = parseInt(parts[1]);
+                                        dateObj = new Date(now.getFullYear(), month - 1, day);
+                                    }
+                                }
+                                
+                                if (dateObj) {
+                                    scheduleItems.push({
+                                        date: dateObj,
+                                        dateStr: dateStr,
+                                        dayOfWeek: dayOfWeek,
+                                        time: time,
+                                        location: location,
+                                        menu: menu,
+                                        pace: pace,
+                                        strengthening: strengthening,
+                                        notes: notes
+                                    });
                                 }
                             }
                             
-                            if (dateObj) {
-                                scheduleItems.push({
-                                    date: dateObj,
-                                    dateStr: dateStr,
-                                    dayOfWeek: dayOfWeek,
-                                    time: time,
-                                    location: location,
-                                    menu: menu,
-                                    pace: pace,
-                                    strengthening: strengthening,
-                                    notes: notes
-                                });
-                            }
-                        }
-                        
-                        // 現在の日付の練習と将来の練習を分ける
-                        const todayStr = `${currentMonth}/${currentDate}`;
-                        const todayItems = scheduleItems.filter(item => item.dateStr === todayStr);
-                        
-                        // 今日より後の練習をソート
-                        const upcomingItems = scheduleItems.filter(item => {
-                            const itemDate = item.date;
+                            // 現在の日付（時間情報なし）
                             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                            return itemDate > today;
-                        }).sort((a, b) => a.date - b.date);
-                        
-                        // 今日の練習を表示
-                        if (todayItems.length > 0) {
-                            todaySchedule.innerHTML = '';
-                            todayItems.forEach((item, index) => {
-                                const card = createScheduleCard(item, index, 'today');
-                                todaySchedule.appendChild(card);
-                            });
-                        } else {
-                            todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今日の練習予定はありません</div>';
-                        }
-                        
-                        // 将来の練習を表示
-                        if (upcomingItems.length > 0) {
-                            upcomingSchedule.innerHTML = '';
+                            const todayStr = `${currentMonth}/${currentDate}`;
                             
-                            // 最初の練習は次回練習として強調
-                            const nextPractice = upcomingItems.shift();
-                            const nextCard = createScheduleCard(nextPractice, 'next', 'next');
-                            upcomingSchedule.appendChild(nextCard);
+                            // 今日の練習をフィルタリング
+                            const todayItems = scheduleItems.filter(item => item.dateStr === todayStr);
                             
-                            // 残りの練習を表示
-                            upcomingItems.forEach((item, index) => {
-                                const card = createScheduleCard(item, index + 1000, 'upcoming');
-                                upcomingSchedule.appendChild(card);
+                            // 今後の練習（今日より後の日付）をフィルタリング
+                            const upcomingItems = scheduleItems.filter(item => {
+                                // 日付の比較（時間部分は含まない）
+                                const itemDate = new Date(
+                                    item.date.getFullYear(),
+                                    item.date.getMonth(),
+                                    item.date.getDate()
+                                );
+                                return itemDate > today;
                             });
-                        } else {
-                            upcomingSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今後の練習予定はありません</div>';
+                            
+                            // 日付順にソート（近い日順）
+                            upcomingItems.sort((a, b) => a.date - b.date);
+                            
+                            // 今日の練習を表示
+                            displaySchedule(todayItems, todaySchedule, 'today', '今日の練習予定はありません');
+                            
+                            // 今後の練習を表示
+                            if (upcomingItems.length > 0) {
+                                upcomingSchedule.innerHTML = '';
+                                
+                                // 最初の練習は次回練習として強調
+                                const nextCard = createScheduleCard(upcomingItems[0], 'next', 'next');
+                                upcomingSchedule.appendChild(nextCard);
+                                
+                                // 残りの練習を表示
+                                for (let i = 1; i < upcomingItems.length; i++) {
+                                    const card = createScheduleCard(upcomingItems[i], i, 'upcoming');
+                                    upcomingSchedule.appendChild(card);
+                                }
+                            } else {
+                                upcomingSchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">今後の練習予定はありません</div>';
+                            }
+                        } catch (error) {
+                            console.error('データの処理中にエラーが発生しました:', error);
+                            showError(todaySchedule);
+                            showError(upcomingSchedule);
                         }
                     })
                     .catch(error => {
                         console.error('データの取得に失敗しました:', error);
-                        todaySchedule.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
-                        upcomingSchedule.innerHTML = '';
+                        showError(todaySchedule);
+                        showError(upcomingSchedule);
                     });
+            }
+            
+            // 練習スケジュールを表示する関数
+            function displaySchedule(items, container, type, emptyMessage) {
+                if (items.length > 0) {
+                    container.innerHTML = '';
+                    items.forEach((item, index) => {
+                        const card = createScheduleCard(item, index, type);
+                        container.appendChild(card);
+                    });
+                } else {
+                    container.innerHTML = `<div class="bg-white p-4 rounded shadow-sm border text-center text-gray-500">${emptyMessage}</div>`;
+                }
+            }
+            
+            // エラーメッセージを表示する関数
+            function showError(container) {
+                container.innerHTML = '<div class="bg-white p-4 rounded shadow-sm border text-red-500 text-center">データの取得に失敗しました</div>';
             }
             
             // 練習カードを作成する関数
@@ -301,10 +329,7 @@
                 return card;
             }
 
-            // 初期データ読み込み
-            fetchAndDisplayData();
-            
-            // 詳細の表示/非表示を切り替える関数をグローバルスコープに追加
+            // 詳細の表示/非表示を切り替える関数
             window.toggleDetails = function(id) {
                 const detailsElement = document.getElementById(`details-${id}`);
                 const iconElement = document.getElementById(`icon-${id}`);
@@ -312,6 +337,9 @@
                 detailsElement.classList.toggle('active');
                 iconElement.classList.toggle('up');
             };
+
+            // 初期データ読み込み
+            fetchAndDisplayData();
         });
     </script>
 </body>
