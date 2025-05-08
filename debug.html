@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デバッグ - TUATTF 練習スケジュール</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body { font-family: monospace; }
+        .debug-section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; }
+        .json-data { max-height: 300px; overflow: auto; font-size: 12px; }
+    </style>
+</head>
+<body class="p-4">
+    <h1 class="text-xl font-bold mb-4">TUATTF スケジュール - デバッグ情報</h1>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">基本情報</h2>
+        <div id="basicInfo"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">取得したデータ (生)</h2>
+        <pre id="rawData" class="bg-gray-100 p-2 text-xs json-data"></pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">解析したJSONデータ</h2>
+        <pre id="jsonData" class="bg-gray-100 p-2 text-xs json-data"></pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">抽出した練習データ</h2>
+        <pre id="scheduleItems" class="bg-gray-100 p-2 text-xs json-data"></pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">フィルタリング結果</h2>
+        <div id="filterResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2 class="font-bold">エラー情報</h2>
+        <div id="errorInfo" class="text-red-500"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const basicInfoElement = document.getElementById('basicInfo');
+            const rawDataElement = document.getElementById('rawData');
+            const jsonDataElement = document.getElementById('jsonData');
+            const scheduleItemsElement = document.getElementById('scheduleItems');
+            const filterResultsElement = document.getElementById('filterResults');
+            const errorInfoElement = document.getElementById('errorInfo');
+            
+            // 現在の日時を取得
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
+            const currentDate = now.getDate();
+            
+            // 基本情報を表示
+            basicInfoElement.innerHTML = `
+                <p>現在の日付: ${currentYear}年${currentMonth}月${currentDate}日</p>
+                <p>対象シート名: ${currentMonth}月メニュー</p>
+                <p>スプレッドシートID: 1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo</p>
+                <p>ブラウザ: ${navigator.userAgent}</p>
+            `;
+            
+            // スプレッドシートのID
+            const spreadsheetId = '1utxuwDZsrLZ5cTq8uIPRdOmMvlE9O1IbE1ymsIey3Uo';
+            
+            // 当月のシート名
+            const sheetName = `${currentMonth}月メニュー`;
+            
+            // Google Sheetsから公開データを取得するURLを構築
+            const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+            
+            errorInfoElement.innerHTML = `<p>データ取得中...</p>`;
+            
+            fetch(url)
+                .then(response => {
+                    errorInfoElement.innerHTML += `<p>HTTPステータス: ${response.status} ${response.statusText}</p>`;
+                    return response.text();
+                })
+                .then(data => {
+                    try {
+                        // 生データを表示
+                        rawDataElement.textContent = data;
+                        
+                        // Googleの応答を解析可能なJSONに変換
+                        const jsonData = JSON.parse(data.substring(47).slice(0, -2));
+                        
+                        // JSONデータを表示
+                        jsonDataElement.textContent = JSON.stringify(jsonData, null, 2);
+                        
+                        // 行データを取得
+                        const rows = jsonData.table.rows;
+                        
+                        // 有効な練習データを抽出
+                        const scheduleItems = [];
+                        
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            
+                            // 空の行または必須項目が空の行をスキップ
+                            if (!row.c || !row.c[0] || !row.c[0].v) {
+                                continue;
+                            }
+                            
+                            const dateStr = row.c[0]?.v || '';
+                            const dayOfWeek = row.c[1]?.v || '';
+                            const time = row.c[2]?.v || '';
+                            const location = row.c[3]?.v || '';
+                            const menu = row.c[4]?.v || '';
+                            const pace = row.c[5]?.v || '';
+                            const strengthening = row.c[6]?.v || '';
+                            const notes = row.c[7]?.v || '';
+                            
+                            // 時間または場所が空の場合はスキップ
+                            if (!time || !location) {
+                                continue;
+                            }
+                            
+                            // 日付文字列を数値に変換して保存（例: "5/10" -> month=5, day=10）
+                            const dateParts = dateStr.split('/');
+                            if (dateParts.length !== 2) {
+                                errorInfoElement.innerHTML += `<p>行 ${i+1}: 日付「${dateStr}」の形式が無効です。</p>`;
+                                continue;
+                            }
+                            
+                            const month = parseInt(dateParts[0]);
+                            const day = parseInt(dateParts[1]);
+                            
+                            // 無効な日付はスキップ
+                            if (isNaN(month) || isNaN(day)) {
+                                errorInfoElement.innerHTML += `<p>行 ${i+1}: 日付「${dateStr}」を数値に変換できません。</p>`;
+                                continue;
+                            }
+                            
+                            scheduleItems.push({
+                                month: month,
+                                day: day,
+                                dateStr: dateStr,
+                                dayOfWeek: dayOfWeek,
+                                time: time,
+                                location: location,
+                                menu: menu,
+                                pace: pace,
+                                strengthening: strengthening,
+                                notes: notes
+                            });
+                        }
+                        
+                        // 練習データを表示
+                        scheduleItemsElement.textContent = JSON.stringify(scheduleItems, null, 2);
+                        
+                        // 今日の日付の月と日を取得
+                        const todayMonth = currentMonth;
+                        const todayDay = currentDate;
+                        
+                        // 今日の練習をフィルタリング
+                        const todayItems = scheduleItems.filter(item => 
+                            item.month === todayMonth && item.day === todayDay
+                        );
+                        
+                        // 今後の練習（今日より後の日付）をフィルタリング
+                        const upcomingItems = scheduleItems.filter(item => {
+                            // 同じ月で日付が大きい場合
+                            if (item.month === todayMonth && item.day > todayDay) {
+                                return true;
+                            }
+                            // 月が大きい場合
+                            if (item.month > todayMonth) {
+                                return true;
+                            }
+                            return false;
+                        });
+                        
+                        // 日付順にソート（近い日順）
+                        upcomingItems.sort((a, b) => {
+                            if (a.month !== b.month) {
+                                return a.month - b.month;
+                            }
+                            return a.day - b.day;
+                        });
+                        
+                        // フィルタリング結果を表示
+                        filterResultsElement.innerHTML = `
+                            <p><strong>今日(${todayMonth}/${todayDay})の練習数:</strong> ${todayItems.length}</p>
+                            <p><strong>今後の練習数:</strong> ${upcomingItems.length}</p>
+                            <p><strong>フィルタリング前の練習数:</strong> ${scheduleItems.length}</p>
+                        `;
+                        
+                        if (upcomingItems.length > 0) {
+                            filterResultsElement.innerHTML += `
+                                <div class="mt-2">
+                                    <p><strong>最初の練習（次回の練習）:</strong></p>
+                                    <pre class="bg-gray-100 p-2 text-xs">${JSON.stringify(upcomingItems[0], null, 2)}</pre>
+                                </div>
+                            `;
+                        }
+                        
+                        errorInfoElement.innerHTML += `<p class="text-green-500">データ処理成功</p>`;
+                    } catch (error) {
+                        errorInfoElement.innerHTML += `
+                            <p>データ処理中にエラーが発生しました: ${error.message}</p>
+                            <p>スタックトレース: ${error.stack}</p>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    errorInfoElement.innerHTML += `
+                        <p>データの取得に失敗しました: ${error.message}</p>
+                        <p>スタックトレース: ${error.stack}</p>
+                    `;
+                });
+        });
+    </script>
+</body>
+</html>
