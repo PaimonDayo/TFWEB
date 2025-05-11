@@ -92,11 +92,11 @@
     .card-content {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.3s ease;
+      transition: max-height 0.5s ease;
     }
 
     .card-content.active {
-      max-height: 500px;
+      max-height: 1000px; /* より大きな値に設定 */
     }
 
     .date-badge {
@@ -196,6 +196,7 @@
     .detail-content {
       font-size: 0.875rem;
       margin-bottom: 0.75rem;
+      word-break: break-word; /* 長いテキストを強制的に改行 */
     }
 
     /* デバッグ用 */
