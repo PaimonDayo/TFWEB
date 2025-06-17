@@ -197,7 +197,7 @@
     .detail-content {
       font-size: 0.875rem;
       margin-bottom: 1rem;
-      white-space: normal;
+      white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: break-word;
       line-height: 1.5;
@@ -456,24 +456,21 @@
         debugLog('CSVデータを解析中...');
         
         try {
-          // CSVを行に分割
-          const lines = csvText.split(/\r?\n/);
-          if (lines.length <= 1) {
+          // CSV全体を解析（引用符内の改行を考慮）
+          const rows = parseCSV(csvText);
+          if (rows.length <= 1) {
             debugLog('CSVデータが空です');
             showMessage('info', '練習データがありません');
             return;
           }
-          
+
           // 練習データを抽出
           const scheduleItems = [];
-          
+
           // 各行を処理（最初の行はヘッダー行なのでスキップ）
-          for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue; // 空行はスキップ
-            
-            // カンマで分割（引用符内のカンマは無視）
-            const columns = parseCSVLine(line);
+          for (let i = 1; i < rows.length; i++) {
+            const columns = rows[i];
+            if (!columns || columns.length === 0) continue;
             
             // 必須項目チェック
             if (columns.length < 4 || !columns[0] || !columns[2] || !columns[3]) continue;
@@ -618,6 +615,49 @@
         
         // 引用符を削除
         return result.map(col => col.replace(/^"|"$/g, '').trim());
+      }
+
+      // CSV全体の解析（引用符内の改行やカンマを考慮）
+      function parseCSV(text) {
+        const rows = [];
+        let row = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+
+          if (char === '"') {
+            if (inQuotes && text[i + 1] === '"') {
+              current += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            row.push(current);
+            current = '';
+          } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            // 行の終了
+            row.push(current);
+            rows.push(row.map(col => col.trim()));
+            row = [];
+            current = '';
+            if (char === '\r' && text[i + 1] === '\n') {
+              i++; // CRLFをスキップ
+            }
+          } else {
+            current += char;
+          }
+        }
+
+        // 最終行を追加
+        if (current.length > 0 || row.length > 0) {
+          row.push(current);
+          rows.push(row.map(col => col.trim()));
+        }
+
+        return rows;
       }
       
       // 練習カードのレンダリング
