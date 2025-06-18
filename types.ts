@@ -14,3 +14,10 @@ export interface ScheduleItem {
 }
 
 export type ScheduleViewType = 'today' | 'future' | 'past';
+
+export interface WeatherInfo {
+  condition: string;
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+}

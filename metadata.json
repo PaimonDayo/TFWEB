@@ -1,5 +1,6 @@
 {
   "name": "TUATTF Practice Schedule",
   "description": "A web application to display TUATTF practice schedules fetched from a Google Spreadsheet. Allows users to view schedules by month, with clear separation of today's, future, and past practices.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "prompt": ""
 }

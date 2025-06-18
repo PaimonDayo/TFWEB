@@ -30,20 +30,13 @@ function parseCsv(csvText: string): string[][] {
         } else { // Not in quotes
             if (char === '"') {
                 inQuotes = true;
-                // If currentFieldChars is not empty here, it implies a quote appeared mid-field.
-                // Standard CSV expects quotes to either start a quoted field or be escaped within one.
-                // We assume that if a quote is encountered, it's the start of a new quoted field.
-                // Any preceding unquoted content for this field should ideally not exist if this quote is structural.
-                // However, this parser will include it if `currentFieldChars` wasn't cleared by a preceding comma/newline.
-                // For typical Google Sheets output, `currentFieldChars` should be empty here.
             } else if (char === ',') {
-                currentRow.push(currentFieldChars.join('').trim());
+                currentRow.push(currentFieldChars.join('')); // Removed .trim()
                 currentFieldChars = [];
             } else if (char === '\n') {
-                currentRow.push(currentFieldChars.join('').trim());
+                currentRow.push(currentFieldChars.join('')); // Removed .trim()
                 currentFieldChars = [];
-                // Add row only if it contains non-empty strings after trimming
-                if (currentRow.some(field => field !== '')) {
+                if (currentRow.some(field => field.trim() !== '')) { // Trim here for row empty check
                     rows.push([...currentRow]);
                 }
                 currentRow = [];
@@ -53,15 +46,13 @@ function parseCsv(csvText: string): string[][] {
         }
     }
 
-    // Add the last field
-    if (currentFieldChars.length > 0 || text[text.length - 1] === ',' || text[text.length -1] === '\n') {
-         // The condition `text[text.length - 1] === ','` ensures an empty field after a trailing comma is added.
-         // `text[text.length-1] === '\n'` ensures an empty field from a trailing newline on an empty line is considered (though row filtering handles empty rows).
-        currentRow.push(currentFieldChars.join('').trim());
+    // Handle the last field of the last line
+    if (currentFieldChars.length > 0 || (currentRow.length > 0 && text[text.length - 1] === ',')) {
+         currentRow.push(currentFieldChars.join('')); // Removed .trim()
     }
-
-    // Add the last row if it has content
-    if (currentRow.some(field => field !== '')) {
+    
+    // Push the last row if it has content
+    if (currentRow.some(field => field.trim() !== '')) { // Trim here for row empty check
         rows.push([...currentRow]);
     }
     
@@ -70,7 +61,9 @@ function parseCsv(csvText: string): string[][] {
 
 
 async function tryFetchSheet(spreadsheetId: string, sheetName: string): Promise<string | null> {
-  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  // Add a cache-busting parameter using the current timestamp
+  const timestamp = new Date().getTime();
+  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&_${timestamp}`;
   
   try {
     const timeoutPromise = new Promise<Response>((_, reject) => 
@@ -111,42 +104,56 @@ export async function fetchAndParseSheetData(spreadsheetId: string, month: numbe
 
   const allRecords = parseCsv(csvText);
 
-  if (allRecords.length <= 1 && (allRecords.length === 0 || allRecords[0].every(col => col === ''))) { 
-    // No data if allRecords is empty, or only has one row that is entirely empty strings (e.g. empty sheet or only headers cleared)
+  if (allRecords.length === 0 || (allRecords.length === 1 && allRecords[0].every(col => col.trim() === ''))) { 
     return []; 
   }
   
   const scheduleItems: ScheduleItem[] = [];
-  // Assuming the first row (if present and not empty) is headers, data starts from index 1.
-  // If allRecords[0] is data (e.g. CSV has no headers), this will skip it.
-  // A more robust approach might be to check if allRecords[0] looks like data or header.
-  // For now, assume if allRecords.length > 0, allRecords[0] could be header or data.
-  // The loop should start from 0 if there are no headers, or 1 if there are.
-  // Let's assume there's always a header row to be skipped if data exists.
-  const dataStartIndex = (allRecords.length > 0 && allRecords[0].join('').length > 0) ? 1 : 0;
+  // Determine if the first row is a header or data by checking if it contains non-empty, non-whitespace cells
+  const firstRowIsLikelyHeader = allRecords.length > 0 && allRecords[0].some(cell => cell.trim() !== ''); // Basic check
+  const dataStartIndex = firstRowIsLikelyHeader ? 1 : 0;
 
 
   for (let i = dataStartIndex; i < allRecords.length; i++) { 
     const columns = allRecords[i];
+     if (columns.length === 0 || columns.every(col => col.trim() === '')) { // Skip completely empty or whitespace-only rows
+        continue;
+    }
 
-    const dateStrRaw = columns[0] ?? '';
+    const dateStrRaw = (columns[0] ?? '').trim();
     if (!dateStrRaw) {
         continue;
     }
 
     let day: number | null = null;
+    let cellMonth: number | null = null;
+
     if (dateStrRaw.includes('/')) {
       const parts = dateStrRaw.split('/');
-      if (parts.length === 2) day = parseInt(parts[1], 10);
-    } else if (dateStrRaw.includes('月')) {
+      if (parts.length === 2) {
+        cellMonth = parseInt(parts[0], 10);
+        day = parseInt(parts[1], 10);
+      }
+    } else if (dateStrRaw.includes('月') && dateStrRaw.includes('日')) {
       const match = dateStrRaw.match(/(\d+)月\s*(\d+)日/);
-      if (match) day = parseInt(match[2], 10);
+      if (match) {
+        cellMonth = parseInt(match[1], 10);
+        day = parseInt(match[2], 10);
+      }
     } else {
       const dayNum = parseInt(dateStrRaw, 10);
-      if (!isNaN(dayNum) && dayNum >=1 && dayNum <=31) day = dayNum; // Ensure day is valid if just a number
+      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+        day = dayNum;
+        cellMonth = month; // Assume current sheet's month if only day number is present
+      }
     }
     
-    if (day === null || isNaN(day) || day < 1 || day > 31) {
+    if (day === null || isNaN(day) || day < 1 || day > 31 ||
+        cellMonth === null || isNaN(cellMonth) || cellMonth < 1 || cellMonth > 12) {
+      continue;
+    }
+
+    if (cellMonth !== month) {
       continue;
     }
 
@@ -155,15 +162,19 @@ export async function fetchAndParseSheetData(spreadsheetId: string, month: numbe
         continue;
     }
 
-    const dayOfWeekVal = columns[1] ?? '';
-    const timeVal = columns[2] ?? '';
-    const locationVal = columns[3] ?? '';
-    const menuVal = columns[4] ?? ''; 
-    const paceVal = columns[5] ?? '';
-    const strengtheningVal = columns[6] ?? '';
-    const notesVal = columns[7] ?? '';
+    const dayOfWeekVal = (columns[1] ?? '').trim();
+    // For timeFromSheet, use raw value from CSV (no trim here)
+    const timeFromSheet = columns[2] ?? ''; 
+    const locationVal = (columns[3] ?? '').trim();
+    const menuVal = (columns[4] ?? '').trim(); 
+    const paceVal = (columns[5] ?? '').trim();
+    const strengtheningVal = (columns[6] ?? '').trim();
+    const notesVal = (columns[7] ?? '').trim();
     
-    if (timeVal === '' && locationVal === '' && menuVal === '') {
+    // Skip row if essential identifying info (location or menu) is missing, 
+    // unless time itself has content (e.g., "調整" or "大会").
+    // An empty time string from sheet is acceptable if other fields have data.
+    if (timeFromSheet.trim() === '' && locationVal === '' && menuVal === '') {
         continue;
     }
 
@@ -172,7 +183,7 @@ export async function fetchAndParseSheetData(spreadsheetId: string, month: numbe
       day: day,
       dateStr: `${month}/${day}`,
       dayOfWeek: dayOfWeekVal,
-      time: timeVal.length > 0 ? timeVal : '情報なし', 
+      time: timeFromSheet, // Use raw value for time
       location: locationVal.length > 0 ? locationVal : '情報なし', 
       menu: menuVal.length > 0 ? menuVal : '情報なし', 
       pace: paceVal.length > 0 ? paceVal : '情報なし', 
