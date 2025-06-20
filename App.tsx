@@ -1,9 +1,12 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ScheduleItem, WeatherInfo } from './types';
-import { SPREADSHEET_ID, MONTHS, DATA_YEAR } from './constants';
-import { fetchAndParseSheetData } from './services/scheduleService';
-import { getMockWeather } from './services/weatherService'; 
+import React, { useState, useEffect, useMemo } from 'react';
+import { ScheduleItem } from './types';
+import { SPREADSHEET_ID, MONTHS, DATA_YEAR, UI_CONSTANTS } from './constants';
+import { useScheduleData } from './hooks/useScheduleData';
+import { useWeatherData } from './hooks/useWeatherData';
+import { useCalendarData } from './hooks/useCalendarData';
+import { useCalendarState } from './hooks/useCalendarState';
+import { formatDate, getCurrentDateKey } from './utils/dateUtils';
 import MonthTabs from './components/MonthTabs';
 import ScheduleCard from './components/ScheduleCard';
 import MessageDisplay from './components/MessageDisplay';
@@ -12,6 +15,7 @@ import Modal from './components/Modal';
 import PracticeCalendar from './components/PracticeCalendar';
 import CalendarIcon from './components/icons/CalendarIcon';
 import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 const App: React.FC = () => {
@@ -21,120 +25,41 @@ const App: React.FC = () => {
   const userActualDay = userActualDate.getDate();
 
   const [selectedMonth, setSelectedMonth] = useState<number>(userActualMonth);
-  const [allScheduleItems, setAllScheduleItems] = useState<ScheduleItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [isCalendarVisible, setIsCalendarVisible] = useState<boolean>(false);
-  const [calendarFocusedMonth, setCalendarFocusedMonth] = useState<number>(selectedMonth);
-  const [calendarScheduleItems, setCalendarScheduleItems] = useState<ScheduleItem[]>([]);
-  const [isLoadingCalendarData, setIsLoadingCalendarData] = useState<boolean>(false);
-
-  const [todayWeather, setTodayWeather] = useState<WeatherInfo | null>(null);
-
 
   const userCurrentAbsoluteDateKey = useMemo(() => {
-    return new Date(userActualYear, userActualMonth - 1, userActualDay, 0, 0, 0, 0).getTime();
-  }, [userActualYear, userActualMonth, userActualDay]);
+    return getCurrentDateKey(userActualDate);
+  }, [userActualDate]);
+
+  const { allScheduleItems, isLoading, error, loadScheduleData, categorizedItems } = useScheduleData(userCurrentAbsoluteDateKey);
+  const { todayWeather } = useWeatherData(userActualDate, userActualYear, DATA_YEAR);
+  const { calendarScheduleItems, isLoadingCalendarData, loadCalendarData } = useCalendarData();
+  const { calendarState, openCalendar, closeCalendar, changeCalendarMonth } = useCalendarState(selectedMonth);
 
   useEffect(() => {
-    const fetchTodayWeather = async () => {
-      if (DATA_YEAR === userActualYear) { 
-        try {
-          const weatherData = await getMockWeather(userActualDate, 'Tokyo'); 
-          setTodayWeather(weatherData);
-        } catch (err) {
-          console.error("Failed to fetch today's weather:", err);
-          setTodayWeather(null);
-        }
-      }
-    };
-    fetchTodayWeather();
-  }, [userActualDate, userActualYear]);
-
-  const loadMainData = useCallback(async (month: number) => {
-    setIsLoading(true);
-    setError(null);
-    setAllScheduleItems([]); 
-    try {
-      const data = await fetchAndParseSheetData(SPREADSHEET_ID, month, DATA_YEAR);
-      setAllScheduleItems(data);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while fetching data.');
-      }
-      setAllScheduleItems([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  
-  const loadCalendarData = useCallback(async (year: number, month: number) => {
-    setIsLoadingCalendarData(true);
-    setCalendarScheduleItems([]);
-    try {
-      const data = await fetchAndParseSheetData(SPREADSHEET_ID, month, year);
-      setCalendarScheduleItems(data);
-    } catch (err) {
-      console.error(`Error fetching calendar data for ${year}-${month}:`, err);
-      setCalendarScheduleItems([]); // Set to empty on error
-    } finally {
-      setIsLoadingCalendarData(false);
-    }
-  }, []);
-
+    loadScheduleData(SPREADSHEET_ID, selectedMonth, DATA_YEAR);
+  }, [selectedMonth, loadScheduleData]);
 
   useEffect(() => {
-    loadMainData(selectedMonth);
-  }, [selectedMonth, loadMainData]);
-
-  useEffect(() => {
-    if (isCalendarVisible) {
-      setCalendarFocusedMonth(selectedMonth); // Sync calendar month with main selected month on open
-      loadCalendarData(DATA_YEAR, selectedMonth);
+    if (calendarState.isCalendarVisible) {
+      loadCalendarData(SPREADSHEET_ID, DATA_YEAR, calendarState.calendarFocusedMonth);
     }
-  }, [isCalendarVisible, selectedMonth, loadCalendarData]);
+  }, [calendarState.isCalendarVisible, calendarState.calendarFocusedMonth, loadCalendarData]);
 
   const handleCalendarMonthChange = (newMonth: number) => {
-    setCalendarFocusedMonth(newMonth);
-    loadCalendarData(DATA_YEAR, newMonth);
+    changeCalendarMonth(newMonth);
   };
   
   const handleOpenCalendar = () => {
-    setCalendarFocusedMonth(selectedMonth); // Ensure calendar opens to the currently selected main month
-    setIsCalendarVisible(true); 
-    // loadCalendarData will be triggered by the useEffect watching isCalendarVisible and selectedMonth
+    openCalendar(selectedMonth);
   };
 
 
-  const categorizedItems = useMemo(() => {
-    const todayItems: ScheduleItem[] = [];
-    const futureItems: ScheduleItem[] = [];
-    const pastItems: ScheduleItem[] = [];
-
-    allScheduleItems.forEach(item => {
-      if (item.dateKey === userCurrentAbsoluteDateKey) {
-        todayItems.push(item);
-      } else if (item.dateKey > userCurrentAbsoluteDateKey) {
-        futureItems.push(item);
-      } else {
-        pastItems.push(item);
-      }
-    });
-
-    futureItems.sort((a, b) => a.dateKey - b.dateKey);
-    pastItems.sort((a, b) => a.dateKey - b.dateKey); // Changed to ascending order
-
-    return { todayItems, futureItems, pastItems };
-  }, [allScheduleItems, userCurrentAbsoluteDateKey]);
 
   const LoadingSkeletons: React.FC = () => (
     <>
-      <ScheduleCardSkeleton />
-      <ScheduleCardSkeleton />
-      <ScheduleCardSkeleton />
+      {Array.from({ length: UI_CONSTANTS.SKELETON_COUNT }, (_, index) => (
+        <ScheduleCardSkeleton key={index} />
+      ))}
     </>
   );
 
@@ -232,11 +157,12 @@ const App: React.FC = () => {
   const currentMonthForTabs = DATA_YEAR === userActualYear ? userActualMonth : 0; 
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 pt-4">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-100 text-gray-800 pt-4">
       <header className="container mx-auto px-4 mb-2 md:mb-4">
           <div className="flex justify-between items-center">
             <div className="text-xs md:text-sm text-gray-500" aria-label="Current date and weather">
-              {`${userActualYear}年${userActualMonth}月${userActualDay}日`}
+              {formatDate(userActualDate)}
               {todayWeather && DATA_YEAR === userActualYear && (
                 <span className="ml-2">
                   {`東京: ${todayWeather.condition}, ${todayWeather.temperature}°C`}
@@ -263,14 +189,14 @@ const App: React.FC = () => {
       </main>
 
       <Modal 
-        isOpen={isCalendarVisible} 
-        onClose={() => setIsCalendarVisible(false)}
-        title={`${DATA_YEAR}年 ${calendarFocusedMonth}月 練習カレンダー`}
+        isOpen={calendarState.isCalendarVisible} 
+        onClose={closeCalendar}
+        title={`${DATA_YEAR}年 ${calendarState.calendarFocusedMonth}月 練習カレンダー`}
       >
         {isLoadingCalendarData ? <LoadingSpinner/> : (
             <PracticeCalendar 
               year={DATA_YEAR} 
-              month={calendarFocusedMonth} 
+              month={calendarState.calendarFocusedMonth} 
               scheduleItems={calendarScheduleItems} 
               onMonthChange={handleCalendarMonthChange}
               isLoading={isLoadingCalendarData}
@@ -281,7 +207,8 @@ const App: React.FC = () => {
       <footer className="text-center py-4 mt-8 text-xs md:text-sm text-gray-500">
         <p>&copy; {userActualYear} TUATTF Schedule Viewer</p>
       </footer>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

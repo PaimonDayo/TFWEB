@@ -1,14 +1,84 @@
-# Run and deploy your AI Studio app
+# TUATTF 練習スケジュール - 本番環境
 
-This contains everything you need to run your app locally.
+## 概要
 
-## Run Locally
+東京大学陸上運動部（TUATTF）の練習スケジュールを表示するWebアプリケーションです。
 
-**Prerequisites:**  Node.js
+## デプロイ方法
 
+### 1. GitHub Pages
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. このフォルダの内容をGitHubリポジトリの `gh-pages` ブランチにアップロード
+2. リポジトリの Settings > Pages で `gh-pages` ブランチを選択
+3. `https://[username].github.io/[repository-name]/` でアクセス可能
+
+### 2. Netlify
+
+1. Netlifyアカウントにログイン
+2. "New site from Git" または ドラッグ&ドロップでこのフォルダをアップロード
+3. 自動的にURLが生成されアクセス可能
+
+### 3. Vercel
+
+1. Vercelアカウントにログイン
+2. "New Project" でこのフォルダをアップロード
+3. 自動デプロイされアクセス可能
+
+### 4. その他の静的ホスティング
+
+- Firebase Hosting
+- AWS S3 + CloudFront
+- GitHub Pages
+- GitLab Pages
+
+## 設定
+
+### 環境変数
+
+本番環境では以下の設定が可能です：
+
+- `VITE_SPREADSHEET_ID`: GoogleスプレッドシートのID
+- `VITE_DATA_YEAR`: 表示年度
+
+### Google Sheets設定
+
+スプレッドシートは以下の要件を満たす必要があります：
+
+1. **公開設定**: "ウェブで公開" または "リンクを知っている全員が閲覧可能"
+2. **シート名**: `1月メニュー`, `2月メニュー`, ... `12月メニュー`
+3. **列構成**:
+   - A列: 日付 (例: "1/15", "15", "1月15日")
+   - B列: 曜日
+   - C列: 時間
+   - D列: 場所
+   - E列: メニュー
+   - F列: ペース
+   - G列: 補強
+   - H列: 備考
+
+## 機能
+
+- 📅 月別練習スケジュール表示
+- 🗓️ カレンダービュー
+- 📱 レスポンシブデザイン（スマホ対応）
+- 🌤️ 天気情報表示
+- ⚡ 高速読み込み（リトライ機能付き）
+- 🛡️ エラーハンドリング
+
+## パフォーマンス最適化
+
+- React.memo による不要な再レンダリング防止
+- カスタムフックによる状態管理最適化
+- ネットワークリクエストのリトライ機能
+- エラーバウンダリによる安定性向上
+
+## ブラウザサポート
+
+- Chrome（推奨）
+- Firefox
+- Safari
+- Edge
+
+## ライセンス
+
+© 2025 TUATTF (東京大学陸上運動部)

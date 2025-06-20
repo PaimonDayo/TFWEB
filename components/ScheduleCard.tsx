@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { ScheduleItem, ScheduleViewType } from '../types';
+import { getLocationColorClasses } from '../utils/locationUtils';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 
@@ -10,26 +11,9 @@ interface ScheduleCardProps {
   defaultExpanded?: boolean;
 }
 
-const getLocationColor = (location: string): string => {
-  const lowerLocation = location.toLowerCase().trim();
-  if (lowerLocation.includes('府中')) return 'bg-blue-300'; 
-  if (lowerLocation.includes('農学部') || lowerLocation.includes('農部')) return 'bg-yellow-200'; 
-  if (lowerLocation.includes('武蔵野')) return 'bg-green-300'; 
-  if (lowerLocation.includes('済美山')) return 'bg-yellow-400'; 
-  if (lowerLocation.includes('東工戦')) return 'bg-teal-500';   
-  if (lowerLocation.includes('外大')) return 'bg-green-600';   
-  
-  if (lowerLocation.includes('織田') || lowerLocation.includes('oda')) return 'bg-sky-500';
-  if (lowerLocation.includes('補助') || lowerLocation.includes('hojo')) return 'bg-emerald-500';
-  if (lowerLocation.includes('agf')) return 'bg-amber-500';
-  if (lowerLocation.includes('トラック') || lowerLocation.includes('track')) return 'bg-red-500';
-  if (lowerLocation.includes('ロード') || lowerLocation.includes('road')) return 'bg-purple-500';
-  
-  return 'bg-gray-400'; 
-};
 
 
-const ScheduleCard: React.FC<ScheduleCardProps> = ({ item, type, defaultExpanded = false }) => {
+const ScheduleCard: React.FC<ScheduleCardProps> = React.memo(({ item, type, defaultExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(type === 'today' || defaultExpanded);
 
   let cardClasses = "bg-white border border-gray-200 rounded-lg mb-3 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 ease-in-out";
@@ -84,7 +68,7 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({ item, type, defaultExpanded
             <span className="text-sm font-semibold text-gray-700" title={item.time}>{item.time}</span>
           </div>
           <div className="flex items-center text-xs text-gray-600 pl-1">
-            <span className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${getLocationColor(item.location)} border border-gray-300`}></span>
+            <span className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${getLocationColorClasses(item.location).split(' ')[0]} border border-gray-300`}></span>
             <span className="truncate font-medium" title={item.location}>{item.location}</span>
           </div>
         </div>
@@ -120,6 +104,8 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({ item, type, defaultExpanded
       </div>
     </div>
   );
-};
+});
+
+ScheduleCard.displayName = 'ScheduleCard';
 
 export default ScheduleCard;

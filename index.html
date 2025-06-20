@@ -5,21 +5,58 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TUATTF 練習スケジュール</title>
+  <meta name="description" content="東京大学陸上運動部の練習スケジュールを確認できるWebアプリケーション">
+  <meta name="keywords" content="東京大学,陸上,練習,スケジュール,TUATTF">
+  <meta name="author" content="TUATTF">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="TUATTF 練習スケジュール">
+  <meta property="og:description" content="東京大学陸上運動部の練習スケジュールを確認できるWebアプリケーション">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary">
+  <meta property="twitter:title" content="TUATTF 練習スケジュール">
+  <meta property="twitter:description" content="東京大学陸上運動部の練習スケジュールを確認できるWebアプリケーション">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
-      background-color: #f7fafc; /* Tailwind's gray-100 */
+      background-color: #f7fafc;
     }
     .month-tabs-container::-webkit-scrollbar {
-      display: none; /* For Chrome, Safari, and Opera */
+      display: none;
     }
     .month-tabs-container {
-      -ms-overflow-style: none;  /* For Internet Explorer and Edge */
-      scrollbar-width: none;  /* For Firefox */
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    /* Loading animation optimization */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    /* Performance optimization for large lists */
+    .schedule-card {
+      will-change: transform;
+    }
+    
+    /* Error boundary styling */
+    .error-boundary {
+      min-height: 50vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 
-<link rel="stylesheet" href="/index.css">
+
 <script type="importmap">
 {
   "imports": {
@@ -29,7 +66,7 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/TFWEB/assets/index-BgK1sNfM.js"></script>
+  <script type="module" crossorigin src="/TFWEB/assets/index-DBcBLjs4.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800"> <!-- Updated body class to match App.tsx -->
   <div id="root"></div>

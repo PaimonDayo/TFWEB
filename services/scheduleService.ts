@@ -1,5 +1,8 @@
 
 import { ScheduleItem } from '../types';
+import { withRetry } from '../utils/retryUtils';
+import { UI_CONSTANTS } from '../constants';
+import { isValidScheduleItem, isValidMonth, isValidYear } from '../utils/typeGuards';
 
 // New CSV parser
 // Handles quoted fields, newlines within quoted fields, and escaped quotes ("").
@@ -61,32 +64,50 @@ function parseCsv(csvText: string): string[][] {
 
 
 async function tryFetchSheet(spreadsheetId: string, sheetName: string): Promise<string | null> {
-  // Add a cache-busting parameter using the current timestamp
   const timestamp = new Date().getTime();
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&_${timestamp}`;
   
-  try {
+  const fetchWithTimeout = async (): Promise<string> => {
     const timeoutPromise = new Promise<Response>((_, reject) => 
-      setTimeout(() => reject(new Error('Data fetch timed out after 10 seconds')), 10000)
+      setTimeout(() => reject(new Error('Request timed out')), 10000)
     );
 
     const response = await Promise.race([fetch(url), timeoutPromise]);
 
     if (!response.ok) {
-      return null;
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
     const text = await response.text();
 
-    if (text.includes('<!DOCTYPE html>') || text.includes('google.visualization.Query.setResponse') || (text.toLowerCase().includes('error') && text.toLowerCase().includes('not found'))) {
-      return null;
+    if (text.includes('<!DOCTYPE html>') || 
+        text.includes('google.visualization.Query.setResponse') || 
+        (text.toLowerCase().includes('error') && text.toLowerCase().includes('not found'))) {
+      throw new Error('Invalid response format or sheet not found');
     }
+
     return text;
+  };
+
+  try {
+    return await withRetry(fetchWithTimeout, {
+      maxAttempts: UI_CONSTANTS.RETRY_ATTEMPTS,
+      baseDelay: UI_CONSTANTS.RETRY_DELAY,
+    });
   } catch (error) {
+    console.warn(`Failed to fetch sheet "${sheetName}":`, error);
     return null;
   }
 }
 
 export async function fetchAndParseSheetData(spreadsheetId: string, month: number, year: number): Promise<ScheduleItem[]> {
+  if (!isValidMonth(month)) {
+    throw new Error(`Invalid month: ${month}. Month must be between 1 and 12.`);
+  }
+  
+  if (!isValidYear(year)) {
+    throw new Error(`Invalid year: ${year}. Year must be between 2000 and 2100.`);
+  }
   const possibleSheetNames = [
     `${month}月メニュー`,
     month < 10 ? `0${month}月メニュー` : null 
@@ -178,19 +199,25 @@ export async function fetchAndParseSheetData(spreadsheetId: string, month: numbe
         continue;
     }
 
-    scheduleItems.push({
+    const scheduleItem: ScheduleItem = {
       id: `${dateKey}-${i}`,
       day: day,
       dateStr: `${month}/${day}`,
       dayOfWeek: dayOfWeekVal,
-      time: timeFromSheet, // Use raw value for time
+      time: timeFromSheet,
       location: locationVal.length > 0 ? locationVal : '情報なし', 
       menu: menuVal.length > 0 ? menuVal : '情報なし', 
       pace: paceVal.length > 0 ? paceVal : '情報なし', 
       strengthening: strengtheningVal.length > 0 ? strengtheningVal : '情報なし', 
       notes: notesVal.length > 0 ? notesVal : '情報なし', 
       dateKey: dateKey,
-    });
+    };
+
+    if (isValidScheduleItem(scheduleItem)) {
+      scheduleItems.push(scheduleItem);
+    } else {
+      console.warn('Invalid schedule item detected, skipping:', scheduleItem);
+    }
   }
   return scheduleItems;
 }
