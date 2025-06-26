@@ -16,6 +16,7 @@ import PracticeCalendar from './components/PracticeCalendar';
 import CalendarIcon from './components/icons/CalendarIcon';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
+import LocationLegend from './components/LocationLegend';
 
 
 const App: React.FC = () => {
@@ -169,13 +170,16 @@ const App: React.FC = () => {
                 </span>
               )}
             </div>
-            <button
-              onClick={handleOpenCalendar}
-              className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-              aria-label="練習カレンダーを表示"
-            >
-              <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <LocationLegend />
+              <button
+                onClick={handleOpenCalendar}
+                className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                aria-label="練習カレンダーを表示"
+              >
+                <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            </div>
           </div>
       </header>
       <main className="container mx-auto px-4 py-3 md:py-6">

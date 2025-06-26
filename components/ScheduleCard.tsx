@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ScheduleItem, ScheduleViewType } from '../types';
-import { getLocationColorClasses } from '../utils/locationUtils';
+import { getLocationCircleColor, getLocationIcon, getLocationTextColor } from '../utils/locationUtils';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 
@@ -67,9 +67,10 @@ const ScheduleCard: React.FC<ScheduleCardProps> = React.memo(({ item, type, defa
             {/* Removed 'truncate' class from the time span below */}
             <span className="text-sm font-semibold text-gray-700" title={item.time}>{item.time}</span>
           </div>
-          <div className="flex items-center text-xs text-gray-600 pl-1">
-            <span className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${getLocationColorClasses(item.location).split(' ')[0]} border border-gray-300`}></span>
-            <span className="truncate font-medium" title={item.location}>{item.location}</span>
+          <div className="flex items-center text-xs pl-1">
+            <span className="mr-1.5 text-sm" aria-hidden="true">{getLocationIcon(item.location)}</span>
+            <span className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${getLocationCircleColor(item.location)} border border-white shadow-sm`}></span>
+            <span className={`truncate font-medium ${getLocationTextColor(item.location)}`} title={item.location}>{item.location}</span>
           </div>
         </div>
         <div className="ml-2 md:ml-3 flex-shrink-0">

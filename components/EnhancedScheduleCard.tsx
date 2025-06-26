@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScheduleItem, ScheduleViewType } from '../types';
-import { getLocationColorClasses, getLocationIcon } from '../utils/locationUtils';
+import { getLocationStyle } from '../utils/locationUtils';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 
@@ -12,15 +12,14 @@ interface EnhancedScheduleCardProps {
 }
 
 const LocationIndicator: React.FC<{ location: string }> = ({ location }) => {
-  const colorClass = getLocationColorClasses(location);
-  const icon = getLocationIcon(location);
+  const locationStyle = getLocationStyle(location);
   
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-sm" aria-hidden="true">{icon}</span>
-      <span className={`w-3 h-3 rounded-full ${colorClass.split(' ')[0]} border border-gray-300`}></span>
+      <span className="text-sm" aria-hidden="true">{locationStyle.icon}</span>
+      <span className={`w-3.5 h-3.5 rounded-full ${locationStyle.circle} border-2 border-white shadow-lg ring-1 ring-gray-200`}></span>
       <span className="sr-only">場所: </span>
-      <span className="text-sm font-medium text-gray-700">{location}</span>
+      <span className={`text-sm font-semibold ${locationStyle.text}`}>{location}</span>
     </div>
   );
 };
