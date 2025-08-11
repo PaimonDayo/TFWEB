@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
       // ↓↓↓ ここに新しい設定を追加しました ↓↓↓
       plugins: [react()],
       base: "/TFWEB/", 
+      build: {
+        outDir: 'docs',
+        emptyOutDir: true,
+      },
 
       // ↓↓↓ もともとあった大事な設定は、そのまま残してあります ↓↓↓
       define: {
