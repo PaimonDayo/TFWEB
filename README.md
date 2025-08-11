@@ -25,8 +25,8 @@
 
 1.  **リポジトリをクローン**
     ```bash
-    git clone https://github.com/<YOUR_USERNAME>/<THIS_REPOSITORY_NAME>.git
-    cd <THIS_REPOSITORY_NAME>
+    git clone https://github.com/paimondayo/TFWEB.git
+    cd TFWEB
     ```
 
 2.  **依存関係をインストール**
@@ -61,7 +61,7 @@ npm run build
 
 ## デプロイ
 
-このリポジトリは、`main` ブランチにプッシュされると、GitHub Actionsによって自動的にビルdされ、GitHub Pagesにデプロイされます。
+このリポジトリは、`main` ブランチにプッシュされると、GitHub Actionsによって自動的にビルドされ、GitHub Pagesにデプロイされます。
 
 デプロイされたサイトは、リポジトリの `Settings > Pages` から確認できるURL（通常は `https://[username].github.io/[repository-name]/`）で公開されます。
 
