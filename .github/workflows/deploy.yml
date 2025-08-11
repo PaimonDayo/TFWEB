@@ -32,6 +32,9 @@ jobs:
           VITE_DATA_YEAR: ${{ secrets.VITE_DATA_YEAR }}
         run: npm run build
 
+      - name: Copy index.html to 404.html
+        run: cp docs/index.html docs/404.html
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
